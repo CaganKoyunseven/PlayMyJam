@@ -9,5 +9,3 @@ Historically, the interaction between the DJ booth and the dance floor has been 
 ## 💡 The Vision & Core Philosophy
 
 Our mission is to eliminate the friction of traditional music requests while respecting the DJ's artistic flow. By leveraging an *Event-Driven Architecture*, the platform ensures that the music never stops and the queue is always synchronized. Whether it is a small local pub or a massive nightclub, Play My Jam adapts to the environment, creating a highly engaging and interactive night out for the guests and a new monetization channel for the venues.
-
----
