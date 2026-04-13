@@ -1,18 +1,111 @@
-import { defineConfig, globalIgnores } from "eslint/config";
-import nextVitals from "eslint-config-next/core-web-vitals";
-import nextTs from "eslint-config-next/typescript";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const eslintConfig = defineConfig([
-  ...nextVitals,
-  ...nextTs,
-  // Override default ignores of eslint-config-next.
-  globalIgnores([
-    // Default ignores of eslint-config-next:
-    ".next/**",
-    "out/**",
-    "build/**",
-    "next-env.d.ts",
-  ]),
-]);
+import { FlatCompat } from "@eslint/eslintrc";
+import js from "@eslint/js";
+import typescriptEslint from "@typescript-eslint/eslint-plugin";
+import tsParser from "@typescript-eslint/parser";
+import prettier from "eslint-plugin-prettier";
+import globals from "globals";
 
-export default eslintConfig;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const compat = new FlatCompat({
+  baseDirectory: __dirname,
+  recommendedConfig: js.configs.recommended,
+  allConfig: js.configs.all,
+});
+
+export default [
+  ...compat.extends(
+    "next",
+    "next/core-web-vitals",
+    "prettier",
+    "plugin:@typescript-eslint/recommended",
+  ),
+  {
+    plugins: {
+      prettier,
+      "@typescript-eslint": typescriptEslint,
+    },
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.jest,
+        JSX: "readonly",
+        React: "readonly",
+      },
+      parser: tsParser,
+    },
+    rules: {
+      "import/no-anonymous-default-export": "off",
+      "react/react-in-jsx-scope": "off",
+      "react/display-name": "off",
+      "react-hooks/exhaustive-deps": "warn",
+      "react-hooks/rules-of-hooks": "error",
+      "react/self-closing-comp": "error",
+      "prettier/prettier": "error",
+      "object-shorthand": "error",
+      quotes: [
+        "error",
+        "single",
+        {
+          avoidEscape: true,
+        },
+      ],
+      "react/jsx-curly-brace-presence": [
+        "error",
+        {
+          props: "never",
+          children: "never",
+        },
+      ],
+      "import/order": [
+        "error",
+        {
+          pathGroups: [
+            {
+              pattern: "react",
+              group: "builtin",
+              position: "after",
+            },
+            {
+              pattern: "next/*",
+              group: "external",
+              position: "before",
+            },
+            {
+              pattern: "@/**",
+              group: "internal",
+              position: "after",
+            },
+          ],
+          groups: [
+            "builtin",
+            "external",
+            "type",
+            "object",
+            "internal",
+            "parent",
+            "sibling",
+            "index",
+          ],
+          pathGroupsExcludedImportTypes: ["react", "next"],
+          "newlines-between": "always",
+          alphabetize: {
+            order: "asc",
+          },
+        },
+      ],
+    },
+  },
+  {
+    files: ["**/*.ts", "**/*.tsx"],
+    rules: {
+      "@typescript-eslint/no-unused-vars": "warn",
+      "@typescript-eslint/restrict-template-expressions": "off",
+      "@next/next/no-img-element": "off",
+      "@typescript-eslint/no-floating-promises": "off",
+    },
+  },
+];
