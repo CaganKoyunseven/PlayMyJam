@@ -27,3 +27,27 @@
     display: none;
   }
 }
+
+/* shadcn/ui CSS variables */
+:root {
+  --shadcn-background: 0 0% 100%;
+  --shadcn-foreground: 222.2 84% 4.9%;
+  --shadcn-card: 0 0% 100%;
+  --shadcn-card-foreground: 222.2 84% 4.9%;
+  --shadcn-popover: 0 0% 100%;
+  --shadcn-popover-foreground: 222.2 84% 4.9%;
+  --shadcn-primary: 222.2 47.4% 11.2%;
+  --shadcn-primary-foreground: 210 40% 98%;
+  --shadcn-secondary: 210 40% 96.1%;
+  --shadcn-secondary-foreground: 222.2 47.4% 11.2%;
+  --shadcn-muted: 210 40% 96.1%;
+  --shadcn-muted-foreground: 215.4 16.3% 46.9%;
+  --shadcn-accent: 210 40% 96.1%;
+  --shadcn-accent-foreground: 222.2 47.4% 11.2%;
+  --shadcn-destructive: 0 84.2% 60.2%;
+  --shadcn-destructive-foreground: 210 40% 98%;
+  --shadcn-border: 214.3 31.8% 91.4%;
+  --shadcn-input: 214.3 31.8% 91.4%;
+  --shadcn-ring: 222.2 84% 4.9%;
+  --shadcn-radius: 0.5rem;
+}
