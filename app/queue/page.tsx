@@ -6,7 +6,7 @@ import { nowPlaying } from '@/lib/mock-data';
 import { useQueue } from '@/lib/queue-context';
 
 export default function QueuePage() {
-  const { queue } = useQueue();
+  const { queue, loading } = useQueue();
 
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-dark max-w-md mx-auto">
@@ -74,7 +74,11 @@ export default function QueuePage() {
             <span className="text-sm text-slate-400">{queue.length} songs in queue</span>
           </div>
 
-          {queue.length === 0 ? (
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <span className="material-symbols-outlined text-white/20 text-5xl animate-spin">refresh</span>
+            </div>
+          ) : queue.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
               <span className="material-symbols-outlined text-white/20 text-5xl">queue_music</span>
               <p className="text-white/40 text-sm font-medium">Queue is empty</p>
