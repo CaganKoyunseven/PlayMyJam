@@ -1,33 +1,55 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode } from 'react';
-import { QueueSong, queueSongs as initialQueue } from './mock-data';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { getQueueEntries, insertQueueEntry, QueueEntry } from './db';
+
+type AddToQueueInput = {
+  spotifyTrackId: string;
+  trackTitle: string;
+  trackArtist: string;
+  albumArtUrl?: string;
+};
 
 type QueueContextType = {
-  queue: QueueSong[];
-  addToQueue: (song: QueueSong) => void;
-  isInQueue: (id: string) => boolean;
+  queue: QueueEntry[];
+  loading: boolean;
+  addToQueue: (entry: AddToQueueInput) => void;
+  isInQueue: (spotifyTrackId: string) => boolean;
 };
 
 const QueueContext = createContext<QueueContextType | null>(null);
 
 export function QueueProvider({ children }: { children: ReactNode }) {
-  const [queue, setQueue] = useState<QueueSong[]>(initialQueue);
+  const [queue, setQueue] = useState<QueueEntry[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  function addToQueue(song: QueueSong) {
-    setQueue((prev) => {
-      // Remove if already exists, then add to top
-      const without = prev.filter((s) => s.id !== song.id);
-      return [song, ...without];
+  useEffect(() => {
+    getQueueEntries().then((entries) => {
+      setQueue(entries);
+      setLoading(false);
     });
+  }, []);
+
+  async function addToQueue(entry: AddToQueueInput) {
+    const optimistic: QueueEntry = {
+      id: entry.spotifyTrackId,
+      title: entry.trackTitle,
+      artist: entry.trackArtist,
+      albumArt: entry.albumArtUrl ?? '',
+      waitMinutes: 0,
+      tokens: 1,
+    };
+
+    setQueue((prev) => [optimistic, ...prev.filter((s) => s.id !== entry.spotifyTrackId)]);
+    await insertQueueEntry(entry);
   }
 
-  function isInQueue(id: string) {
-    return queue.some((s) => s.id === id);
+  function isInQueue(spotifyTrackId: string) {
+    return queue.some((s) => s.id === spotifyTrackId);
   }
 
   return (
-    <QueueContext.Provider value={{ queue, addToQueue, isInQueue }}>
+    <QueueContext.Provider value={{ queue, loading, addToQueue, isInQueue }}>
       {children}
     </QueueContext.Provider>
   );

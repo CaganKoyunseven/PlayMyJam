@@ -1,20 +1,26 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import BottomNav from '@/components/bottom-nav';
-import { browseSongs, Genre } from '@/lib/mock-data';
+import { getPlaylistTracks, SpotifyTrack } from '@/lib/spotify';
 import { useQueue } from '@/lib/queue-context';
 
-const genres: ('All' | Genre)[] = ['All', 'Pop', 'Rock', 'Hip-Hop', 'R&B', 'Electronic', 'Latin'];
+const genres = ['All', 'Pop', 'Rock', 'Hip-Hop', 'R&B', 'Electronic', 'Latin'] as const;
+type GenreFilter = (typeof genres)[number];
 
 export default function BrowsePage() {
   const router = useRouter();
   const { addToQueue, isInQueue } = useQueue();
-  const [activeGenre, setActiveGenre] = useState<'All' | Genre>('All');
+  const [songs, setSongs] = useState<SpotifyTrack[]>([]);
+  const [activeGenre, setActiveGenre] = useState<GenreFilter>('All');
   const [search, setSearch] = useState('');
 
-  const filtered = browseSongs.filter((song) => {
+  useEffect(() => {
+    getPlaylistTracks(null).then(setSongs);
+  }, []);
+
+  const filtered = songs.filter((song) => {
     const matchesGenre = activeGenre === 'All' || song.genre === activeGenre;
     const matchesSearch =
       search === '' ||
@@ -25,7 +31,6 @@ export default function BrowsePage() {
 
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-dark pb-24 max-w-md mx-auto">
-      {/* Sticky Header */}
       <header className="sticky top-0 z-30 flex items-center justify-between p-4 bg-background-dark/95 backdrop-blur-md">
         <button className="flex size-10 shrink-0 items-center justify-center rounded-full text-white active:bg-white/10 transition-colors">
           <span className="material-symbols-outlined text-2xl">arrow_back</span>
@@ -36,9 +41,7 @@ export default function BrowsePage() {
         </button>
       </header>
 
-      {/* Sticky Search + Filters */}
       <div className="sticky top-[72px] z-20 bg-background-dark flex flex-col gap-4 px-4 pt-2 pb-3">
-        {/* Search */}
         <div className="flex h-12 w-full">
           <div className="flex w-full flex-1 items-stretch rounded-2xl bg-white/5 overflow-hidden">
             <div className="flex items-center justify-center pl-4 pr-2 text-white/40">
@@ -61,7 +64,6 @@ export default function BrowsePage() {
           </div>
         </div>
 
-        {/* Genre Pills */}
         <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4 snap-x">
           {genres.map((genre) => (
             <button
@@ -79,9 +81,14 @@ export default function BrowsePage() {
         </div>
       </div>
 
-      {/* Song List */}
       <div className="flex flex-col px-4 divide-y divide-white/5">
-        {filtered.length === 0 ? (
+        {songs.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+            <span className="material-symbols-outlined text-white/20 text-5xl">music_off</span>
+            <p className="text-white/40 text-sm font-medium">No songs available</p>
+            <p className="text-white/20 text-xs">Connect Spotify to load your venue playlist</p>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
             <span className="material-symbols-outlined text-white/20 text-5xl">music_off</span>
             <p className="text-white/40 text-sm font-medium">No songs found</p>
@@ -89,10 +96,9 @@ export default function BrowsePage() {
         ) : (
           filtered.map((song) => (
             <div
-              key={song.id}
+              key={song.spotifyId}
               className="flex items-center gap-4 py-3 active:bg-white/5 transition-colors cursor-pointer group"
             >
-              {/* Album Art */}
               <div className="relative size-12 shrink-0 rounded-full overflow-hidden">
                 <div
                   className="absolute inset-0 bg-cover bg-center"
@@ -100,7 +106,6 @@ export default function BrowsePage() {
                 />
               </div>
 
-              {/* Info */}
               <div className="flex flex-col flex-1 min-w-0">
                 <h3 className="text-sm font-semibold text-white truncate">{song.title}</h3>
                 <div className="flex items-center gap-2 mt-0.5">
@@ -109,7 +114,7 @@ export default function BrowsePage() {
                   <span className="text-[10px] font-bold text-white/30 shrink-0">{song.genre}</span>
                   <span className="size-1 rounded-full bg-white/20 shrink-0" />
                   <div className="flex items-center gap-0.5 shrink-0">
-                    <span className="text-[10px] font-bold text-primary">{song.tokens}</span>
+                    <span className="text-[10px] font-bold text-primary">1</span>
                     <span
                       className="material-symbols-outlined text-[10px] text-primary"
                       style={{ fontVariationSettings: "'FILL' 1" }}
@@ -120,18 +125,25 @@ export default function BrowsePage() {
                 </div>
               </div>
 
-              {/* Add Button */}
               <button
                 onClick={() => {
-                  addToQueue({ ...song, waitMinutes: 0 });
+                  addToQueue({
+                    spotifyTrackId: song.spotifyId,
+                    trackTitle: song.title,
+                    trackArtist: song.artist,
+                    albumArtUrl: song.albumArt,
+                  });
                   router.push('/queue');
                 }}
                 className={`size-10 flex items-center justify-center active:scale-90 transition-all ${
-                  isInQueue(song.id) ? 'text-green-400' : 'text-white/40 group-hover:text-primary'
+                  isInQueue(song.spotifyId) ? 'text-green-400' : 'text-white/40 group-hover:text-primary'
                 }`}
               >
-                <span className="material-symbols-outlined" style={isInQueue(song.id) ? { fontVariationSettings: "'FILL' 1" } : {}}>
-                  {isInQueue(song.id) ? 'check_circle' : 'add_circle'}
+                <span
+                  className="material-symbols-outlined"
+                  style={isInQueue(song.spotifyId) ? { fontVariationSettings: "'FILL' 1" } : {}}
+                >
+                  {isInQueue(song.spotifyId) ? 'check_circle' : 'add_circle'}
                 </span>
               </button>
             </div>
