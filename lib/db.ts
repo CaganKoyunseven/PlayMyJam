@@ -59,6 +59,153 @@ export async function insertQueueEntry(entry: {
   });
 }
 
+// ── Queue Items (new table) ───────────────────────────────────
+
+export type QueueItem = {
+  id: string;
+  songId: string;
+  position: number;
+  isPlaying: boolean;
+  title: string;
+  artist: string;
+  albumArt: string;
+  durationMs: number;
+};
+
+export async function getQueueItems(): Promise<QueueItem[]> {
+  const { data } = await supabase
+    .from('queue_items')
+    .select('*, songs(title, artist, album_art, duration_ms)')
+    .eq('venue_id', DEFAULT_VENUE_ID)
+    .order('position', { ascending: true });
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    songId: row.song_id,
+    position: row.position,
+    isPlaying: row.is_playing,
+    title: row.songs?.title ?? '',
+    artist: row.songs?.artist ?? '',
+    albumArt: row.songs?.album_art ?? '',
+    durationMs: row.songs?.duration_ms ?? 0,
+  }));
+}
+
+export async function insertQueueItem(songId: string, position?: number): Promise<void> {
+  const pos = position ?? Date.now();
+  await supabase.from('queue_items').insert({
+    venue_id: DEFAULT_VENUE_ID,
+    song_id: songId,
+    position: pos,
+    is_playing: false,
+  });
+}
+
+export async function updateQueueItemPosition(id: string, position: number): Promise<void> {
+  await supabase.from('queue_items').update({ position }).eq('id', id);
+}
+
+export async function removeQueueItem(id: string): Promise<void> {
+  await supabase.from('queue_items').delete().eq('id', id);
+}
+
+export async function setNowPlaying(id: string): Promise<void> {
+  await supabase.from('queue_items').update({ is_playing: false }).eq('venue_id', DEFAULT_VENUE_ID);
+  await supabase.from('queue_items').update({ is_playing: true }).eq('id', id);
+}
+
+// ── Song Requests ─────────────────────────────────────────────
+
+export async function insertSongRequest(songId: string, _sessionId: string): Promise<void> {
+  await supabase.from('song_requests').insert({
+    venue_id: DEFAULT_VENUE_ID,
+    song_id: songId,
+    tokens_spent: 1,
+    status: 'pending',
+  });
+}
+
+// ── Token Balances ────────────────────────────────────────────
+
+export async function getOrCreateTokenBalance(sessionId: string): Promise<number> {
+  const { data } = await supabase
+    .from('token_balances')
+    .select('balance')
+    .eq('session_id', sessionId)
+    .single();
+
+  if (data) return data.balance;
+
+  await supabase.from('token_balances').insert({ session_id: sessionId, balance: 10 });
+  return 10;
+}
+
+export async function deductToken(sessionId: string): Promise<{ ok: boolean; balance: number }> {
+  const { data } = await supabase
+    .from('token_balances')
+    .select('balance')
+    .eq('session_id', sessionId)
+    .single();
+
+  const current = data?.balance ?? 0;
+  if (current < 1) return { ok: false, balance: current };
+
+  const newBalance = current - 1;
+  await supabase
+    .from('token_balances')
+    .update({ balance: newBalance, updated_at: new Date().toISOString() })
+    .eq('session_id', sessionId);
+
+  return { ok: true, balance: newBalance };
+}
+
+// ── Playlists ─────────────────────────────────────────────────
+
+export type PlaylistRow = {
+  id: string;
+  spotifyPlaylistId: string;
+  name: string;
+  imageUrl: string | null;
+  trackCount: number;
+};
+
+export async function getVenueImportedPlaylists(): Promise<PlaylistRow[]> {
+  const { data } = await supabase
+    .from('playlists')
+    .select('*')
+    .eq('venue_id', DEFAULT_VENUE_ID)
+    .order('imported_at', { ascending: false });
+
+  return (data ?? []).map((p) => ({
+    id: p.id,
+    spotifyPlaylistId: p.spotify_playlist_id,
+    name: p.name,
+    imageUrl: p.image_url,
+    trackCount: p.track_count,
+  }));
+}
+
+export async function getPlaylistSongs(playlistId: string): Promise<QueueItem[]> {
+  const { data } = await supabase
+    .from('playlist_songs')
+    .select('position, songs(id, title, artist, album_art, duration_ms)')
+    .eq('playlist_id', playlistId)
+    .order('position', { ascending: true });
+
+  return (data ?? []).map((row: any) => ({
+    id: row.songs.id,
+    songId: row.songs.id,
+    position: row.position,
+    isPlaying: false,
+    title: row.songs.title,
+    artist: row.songs.artist,
+    albumArt: row.songs.album_art ?? '',
+    durationMs: row.songs.duration_ms ?? 0,
+  }));
+}
+
+// ── User Profile ──────────────────────────────────────────────
+
 export async function getUserProfile(): Promise<UserProfile | null> {
   const {
     data: { user },
