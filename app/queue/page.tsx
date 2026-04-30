@@ -1,16 +1,69 @@
 'use client';
 
+import { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import BottomNav from '@/components/bottom-nav';
-import { nowPlaying } from '@/lib/mock-data';
-import { useQueue } from '@/lib/queue-context';
+import NowPlaying from '@/components/now-playing';
+import { supabase } from '@/lib/supabase';
+import { getQueueItems, QueueItem } from '@/lib/db';
+import { DEFAULT_VENUE_ID } from '@/lib/constants';
+
+function SpotifyBanners() {
+  const searchParams = useSearchParams();
+  const spotifyConnected = searchParams.get('spotify_connected') === '1';
+  const spotifyError = searchParams.get('spotify_error');
+  return (
+    <>
+      {spotifyConnected && (
+        <div className="mt-2 rounded-xl bg-green-500/10 border border-green-500/20 px-4 py-3 flex items-center gap-2">
+          <span className="material-symbols-outlined text-green-400 text-[18px]">check_circle</span>
+          <span className="text-sm text-green-400 font-medium">Spotify connected successfully</span>
+        </div>
+      )}
+      {spotifyError && (
+        <div className="mt-2 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 flex items-center gap-2">
+          <span className="material-symbols-outlined text-red-400 text-[18px]">error</span>
+          <span className="text-sm text-red-400 font-medium">Spotify error: {spotifyError}</span>
+        </div>
+      )}
+    </>
+  );
+}
 
 export default function QueuePage() {
-  const { queue, loading } = useQueue();
+
+  const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [nowPlayingItem, setNowPlayingItem] = useState<QueueItem | null>(null);
+
+  useEffect(() => {
+    getQueueItems().then((items) => {
+      setQueue(items.filter((i) => !i.isPlaying));
+      setNowPlayingItem(items.find((i) => i.isPlaying) ?? null);
+      setLoading(false);
+    });
+
+    // Realtime subscription
+    const channel = supabase
+      .channel('queue_items_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'queue_items', filter: `venue_id=eq.${DEFAULT_VENUE_ID}` },
+        () => {
+          getQueueItems().then((items) => {
+            setQueue(items.filter((i) => !i.isPlaying));
+            setNowPlayingItem(items.find((i) => i.isPlaying) ?? null);
+          });
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-dark max-w-md mx-auto">
-      {/* Header */}
       <header className="sticky top-0 z-50 flex items-center justify-between p-4 bg-background-dark/90 backdrop-blur-md">
         <button className="flex size-10 items-center justify-center rounded-full text-white hover:bg-white/10 transition-colors">
           <span className="material-symbols-outlined text-2xl">arrow_back</span>
@@ -22,6 +75,9 @@ export default function QueuePage() {
       </header>
 
       <main className="flex-1 flex flex-col gap-6 px-4 pb-40">
+        {/* Spotify status banners */}
+        <Suspense><SpotifyBanners /></Suspense>
+
         {/* Now Playing */}
         <section className="mt-2">
           <div className="flex items-center justify-between mb-4">
@@ -34,37 +90,16 @@ export default function QueuePage() {
             </span>
           </div>
 
-          {/* Vinyl Disc */}
-          <div className="relative group w-full aspect-square max-w-[300px] mx-auto">
-            <div
-              className="absolute inset-0 rounded-full blur-2xl opacity-40 group-hover:opacity-60 transition-opacity duration-500"
-              style={{ background: 'linear-gradient(to top right, #f20da6, #9333ea, #2563eb)' }}
-            />
-            <div className="relative w-full h-full rounded-full border-4 border-white/10 bg-black shadow-2xl flex items-center justify-center overflow-hidden">
-              <div
-                className="absolute inset-0 rounded-full opacity-20"
-                style={{ background: 'repeating-radial-gradient(#111 0, #111 2px, #222 3px, #222 4px)' }}
-              />
-              <div className="relative w-[65%] h-[65%] rounded-full overflow-hidden border-8 border-black shadow-lg animate-spin [animation-duration:10s]">
-                <img src={nowPlaying.albumArt} alt={nowPlaying.title} className="w-full h-full object-cover" />
-              </div>
-              <div className="absolute w-4 h-4 bg-background-dark rounded-full z-10" />
-            </div>
-          </div>
+          <NowPlaying
+            playlistUri={nowPlayingItem ? undefined : undefined}
+          />
 
-          {/* Song info */}
-          <div className="text-center mt-6 space-y-1">
-            <h3 className="text-2xl font-bold">{nowPlaying.title}</h3>
-            <p className="text-slate-400 text-lg">{nowPlaying.artist}</p>
-            <div className="flex items-center justify-center gap-2 mt-2">
-              <div className="h-1 w-full max-w-[120px] bg-white/10 rounded-full overflow-hidden">
-                <div className="h-full bg-primary rounded-full" style={{ width: `${nowPlaying.progress}%` }} />
-              </div>
-              <span className="text-xs font-mono text-slate-400">
-                {nowPlaying.currentTime} / {nowPlaying.totalTime}
-              </span>
+          {nowPlayingItem && (
+            <div className="text-center mt-4 space-y-1">
+              <h3 className="text-xl font-bold">{nowPlayingItem.title}</h3>
+              <p className="text-slate-400">{nowPlayingItem.artist}</p>
             </div>
-          </div>
+          )}
         </section>
 
         {/* Queue List */}
@@ -97,7 +132,6 @@ export default function QueuePage() {
                       : 'bg-surface-dark border-transparent hover:border-primary/50'
                   }`}
                 >
-                  {/* Position badge */}
                   <div className={`shrink-0 size-6 rounded-full flex items-center justify-center text-[11px] font-black ${
                     index === 0 ? 'bg-primary text-white' : 'bg-white/10 text-white/40'
                   }`}>
@@ -105,7 +139,13 @@ export default function QueuePage() {
                   </div>
 
                   <div className="relative shrink-0 size-14 rounded overflow-hidden">
-                    <img src={song.albumArt} alt={song.title} className="w-full h-full object-cover" />
+                    {song.albumArt ? (
+                      <img src={song.albumArt} alt={song.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-surface-dark flex items-center justify-center">
+                        <span className="material-symbols-outlined text-white/20">music_note</span>
+                      </div>
+                    )}
                     <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                       <span className="material-symbols-outlined text-white text-lg">play_arrow</span>
                     </div>
@@ -117,9 +157,6 @@ export default function QueuePage() {
                   </div>
 
                   <div className="flex items-center gap-2 text-slate-400">
-                    {song.waitMinutes > 0 && (
-                      <span className="text-xs font-bold text-slate-500">{song.waitMinutes} min</span>
-                    )}
                     {index === 0 && (
                       <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Next</span>
                     )}
