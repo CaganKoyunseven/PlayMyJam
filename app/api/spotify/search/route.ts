@@ -7,11 +7,15 @@ export async function GET(req: NextRequest) {
 
   try {
     const token = await getClientCredentialsToken();
-    const res = await fetch(
-      `https://api.spotify.com/v1/search?q=${encodeURIComponent(q)}&type=track&limit=20`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    if (!res.ok) return NextResponse.json([], { status: res.status });
+    const params = new URLSearchParams({ q, type: 'track', limit: '10' });
+    const res = await fetch(`https://api.spotify.com/v1/search?${params}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}));
+      return NextResponse.json({ error: errBody }, { status: res.status });
+    }
 
     const data = await res.json();
     const tracks = (data?.tracks?.items ?? []).map((t: any) => ({
