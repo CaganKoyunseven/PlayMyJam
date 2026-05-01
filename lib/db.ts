@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { DEFAULT_VENUE_ID } from './constants';
+import { publish, EventType } from './event-bus';
 
 export type QueueEntry = {
   id: string;
@@ -99,6 +100,9 @@ export async function insertQueueItem(songId: string, position?: number): Promis
     position: pos,
     is_playing: false,
   });
+  publish(EventType.SONG_ADDED_TO_QUEUE, { songId }).catch(
+    (err) => console.error('[db] publish SONG_ADDED_TO_QUEUE failed:', err)
+  );
 }
 
 export async function updateQueueItemPosition(id: string, position: number): Promise<void> {
@@ -109,20 +113,26 @@ export async function removeQueueItem(id: string): Promise<void> {
   await supabase.from('queue_items').delete().eq('id', id);
 }
 
-export async function setNowPlaying(id: string): Promise<void> {
+export async function setNowPlaying(id: string, spotifyTrackUri?: string, deviceId?: string): Promise<void> {
   await supabase.from('queue_items').update({ is_playing: false }).eq('venue_id', DEFAULT_VENUE_ID);
   await supabase.from('queue_items').update({ is_playing: true }).eq('id', id);
+  publish(EventType.SONG_STARTED, { queueItemId: id, spotifyTrackUri: spotifyTrackUri ?? '', deviceId: deviceId ?? '' }).catch(
+    (err) => console.error('[db] publish SONG_STARTED failed:', err)
+  );
 }
 
 // ── Song Requests ─────────────────────────────────────────────
 
-export async function insertSongRequest(songId: string, _sessionId: string): Promise<void> {
+export async function insertSongRequest(songId: string, sessionId: string): Promise<void> {
   await supabase.from('song_requests').insert({
     venue_id: DEFAULT_VENUE_ID,
     song_id: songId,
     tokens_spent: 1,
     status: 'pending',
   });
+  publish(EventType.SONG_REQUESTED, { songId, sessionId }).catch(
+    (err) => console.error('[db] publish SONG_REQUESTED failed:', err)
+  );
 }
 
 // ── Token Balances ────────────────────────────────────────────
@@ -155,6 +165,10 @@ export async function deductToken(sessionId: string): Promise<{ ok: boolean; bal
     .from('token_balances')
     .update({ balance: newBalance, updated_at: new Date().toISOString() })
     .eq('session_id', sessionId);
+
+  publish(EventType.TOKEN_SPENT, { sessionId, amount: 1, newBalance }).catch(
+    (err) => console.error('[db] publish TOKEN_SPENT failed:', err)
+  );
 
   return { ok: true, balance: newBalance };
 }

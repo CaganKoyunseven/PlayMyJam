@@ -152,6 +152,13 @@ export async function startPlayback(deviceId: string, spotifyPlaylistUri: string
   });
 }
 
+export async function playTrack(deviceId: string, trackUri: string) {
+  return spotifyFetch(`/me/player/play?device_id=${deviceId}`, true, {
+    method: 'PUT',
+    body: JSON.stringify({ uris: [trackUri] }),
+  });
+}
+
 export async function pausePlayback() {
   return spotifyFetch('/me/player/pause', true, { method: 'PUT' });
 }
