@@ -17,7 +17,7 @@ import {
 } from '@/lib/db';
 import { initObservers, teardownObservers } from '@/lib/observers';
 import { DEFAULT_VENUE_ID } from '@/lib/constants';
-import { getSpotifyAuthUrl, getVenueToken } from '@/lib/spotify-auth';
+import { getVenueToken } from '@/lib/spotify-auth';
 import { getVenuePlaylists, importPlaylist, checkSpotifyConnection, SpotifyPlaylist } from '@/lib/spotify-api';
 
 function timeAgo(iso: string): string {
@@ -351,7 +351,7 @@ export default function AdminDashboard() {
 
               {spotifyPlaylists.length === 0 ? (
                 <a
-                  href={getSpotifyAuthUrl()}
+                  href="/api/spotify/connect"
                   className="flex h-11 items-center justify-center gap-2 rounded-xl font-bold text-sm text-white transition-all active:scale-95"
                   style={{ background: '#1DB954' }}
                 >
