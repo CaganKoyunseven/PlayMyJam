@@ -16,8 +16,6 @@ import {
 import { initObservers, teardownObservers } from '@/lib/observers';
 import { DEFAULT_VENUE_ID } from '@/lib/constants';
 
-const SESSION_KEY = 'pmj_admin_auth';
-
 function timeAgo(iso: string): string {
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
   if (diff < 60) return `${diff}s ago`;
@@ -34,10 +32,6 @@ export default function AdminDashboard() {
   const [tab, setTab] = useState<'requests' | 'queue'>('requests');
 
   useEffect(() => {
-    if (!sessionStorage.getItem(SESSION_KEY)) {
-      router.replace('/admin');
-      return;
-    }
     initObservers();
     load();
 
@@ -99,8 +93,8 @@ export default function AdminDashboard() {
     setActing(null);
   }
 
-  function handleLogout() {
-    sessionStorage.removeItem(SESSION_KEY);
+  async function handleLogout() {
+    await fetch('/api/admin/logout', { method: 'POST' });
     router.replace('/admin');
   }
 

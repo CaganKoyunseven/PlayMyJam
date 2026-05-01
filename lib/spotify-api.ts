@@ -156,16 +156,9 @@ export type SpotifyTrackResult = {
 
 export async function searchTracks(query: string): Promise<SpotifyTrackResult[]> {
   if (!query.trim()) return [];
-  const encoded = encodeURIComponent(query.trim());
-  const data = await spotifyFetch(`/search?q=${encoded}&type=track&limit=20`);
-  return (data?.tracks?.items ?? []).map((t: any) => ({
-    spotifyTrackId: t.id,
-    title: t.name,
-    artist: t.artists.map((a: any) => a.name).join(', '),
-    album: t.album?.name ?? '',
-    albumArt: t.album?.images?.[0]?.url ?? null,
-    durationMs: t.duration_ms ?? 0,
-  }));
+  const res = await fetch(`/api/spotify/search?q=${encodeURIComponent(query.trim())}`);
+  if (!res.ok) return [];
+  return res.json();
 }
 
 // ── Playback (requires venue token + Spotify Premium) ─────────
