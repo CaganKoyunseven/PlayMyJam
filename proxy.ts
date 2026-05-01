@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   if (request.nextUrl.pathname.startsWith('/admin/dashboard')) {
     const token = request.cookies.get('pmj_admin')?.value;
     const adminUser = process.env.ADMIN_USERNAME ?? '';
