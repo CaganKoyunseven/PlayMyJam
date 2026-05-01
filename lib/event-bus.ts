@@ -12,7 +12,8 @@ export const EventType = {
   SONG_FINISHED:       'SONG_FINISHED',
   TOKEN_SPENT:         'TOKEN_SPENT',
   TOKEN_PURCHASED:     'TOKEN_PURCHASED',
-  QUEUE_REORDERED:     'QUEUE_REORDERED',
+  QUEUE_REORDERED:       'QUEUE_REORDERED',
+  SONG_ADDED_TO_LIBRARY: 'SONG_ADDED_TO_LIBRARY',
 } as const;
 
 export type EventType = (typeof EventType)[keyof typeof EventType];

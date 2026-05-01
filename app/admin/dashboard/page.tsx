@@ -73,7 +73,7 @@ export default function AdminDashboard() {
 
   async function handleApprove(req: SongRequest) {
     setActing(req.id);
-    await approveRequest(req.id, req.songId);
+    await approveRequest(req.id, req.songId, req.sessionId);
     setRequests((prev) => prev.filter((r) => r.id !== req.id));
     setActing(null);
   }
@@ -195,9 +195,6 @@ export default function AdminDashboard() {
                     <p className="text-sm font-bold truncate">{req.title}</p>
                     <p className="text-xs text-slate-400 truncate">{req.artist}</p>
                     <div className="flex items-center gap-1 mt-0.5">
-                      <span className="material-symbols-outlined text-[10px] text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>token</span>
-                      <span className="text-[10px] text-primary font-bold">{req.tokensSpent}</span>
-                      <span className="text-[10px] text-white/20 mx-1">·</span>
                       <span className="text-[10px] text-white/30">{timeAgo(req.requestedAt)}</span>
                     </div>
                   </div>

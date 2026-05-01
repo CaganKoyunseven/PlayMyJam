@@ -143,6 +143,31 @@ export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playl
   return { playlistId, imported: tracks.length };
 }
 
+// ── Track search (client credentials) ────────────────────────
+
+export type SpotifyTrackResult = {
+  spotifyTrackId: string;
+  title: string;
+  artist: string;
+  album: string;
+  albumArt: string | null;
+  durationMs: number;
+};
+
+export async function searchTracks(query: string): Promise<SpotifyTrackResult[]> {
+  if (!query.trim()) return [];
+  const encoded = encodeURIComponent(query.trim());
+  const data = await spotifyFetch(`/search?q=${encoded}&type=track&limit=20`);
+  return (data?.tracks?.items ?? []).map((t: any) => ({
+    spotifyTrackId: t.id,
+    title: t.name,
+    artist: t.artists.map((a: any) => a.name).join(', '),
+    album: t.album?.name ?? '',
+    albumArt: t.album?.images?.[0]?.url ?? null,
+    durationMs: t.duration_ms ?? 0,
+  }));
+}
+
 // ── Playback (requires venue token + Spotify Premium) ─────────
 
 export async function startPlayback(deviceId: string, spotifyPlaylistUri: string) {

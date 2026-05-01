@@ -129,14 +129,14 @@ export type SongRequest = {
   title: string;
   artist: string;
   albumArt: string;
-  tokensSpent: number;
+  sessionId: string | null;
   requestedAt: string;
 };
 
 export async function getPendingRequests(): Promise<SongRequest[]> {
   const { data } = await supabase
     .from('song_requests')
-    .select('id, song_id, tokens_spent, requested_at, songs(title, artist, album_art)')
+    .select('id, song_id, session_id, requested_at, songs(title, artist, album_art)')
     .eq('venue_id', DEFAULT_VENUE_ID)
     .eq('status', 'pending')
     .order('requested_at', { ascending: true });
@@ -147,16 +147,42 @@ export async function getPendingRequests(): Promise<SongRequest[]> {
     title: row.songs?.title ?? '',
     artist: row.songs?.artist ?? '',
     albumArt: row.songs?.album_art ?? '',
-    tokensSpent: row.tokens_spent,
+    sessionId: row.session_id ?? null,
     requestedAt: row.requested_at,
   }));
 }
 
-export async function approveRequest(requestId: string, songId: string): Promise<void> {
+// Admin approves an out-of-playlist request:
+// adds the song to all venue playlists + publishes SONG_ADDED_TO_LIBRARY
+export async function approveRequest(requestId: string, songId: string, sessionId: string | null): Promise<void> {
+  // Get song info for notification payload
+  const { data: song } = await supabase
+    .from('songs')
+    .select('title, artist')
+    .eq('id', songId)
+    .single();
+
+  // Add song to all venue playlists so it shows up in browse
+  const { data: playlists } = await supabase
+    .from('playlists')
+    .select('id')
+    .eq('venue_id', DEFAULT_VENUE_ID);
+
+  if (playlists && playlists.length > 0) {
+    await supabase.from('playlist_songs').upsert(
+      playlists.map((pl) => ({ playlist_id: pl.id, song_id: songId, position: 99999 })),
+      { onConflict: 'playlist_id,song_id' }
+    );
+  }
+
   await supabase.from('song_requests').update({ status: 'accepted' }).eq('id', requestId);
-  publish(EventType.SONG_APPROVED, { requestId, songId }).catch(
-    (err) => console.error('[db] publish SONG_APPROVED failed:', err)
-  );
+
+  publish(EventType.SONG_ADDED_TO_LIBRARY, {
+    songId,
+    title: song?.title ?? '',
+    artist: song?.artist ?? '',
+    requestedBySessionId: sessionId,
+  }).catch((err) => console.error('[db] publish SONG_ADDED_TO_LIBRARY failed:', err));
 }
 
 export async function rejectRequest(requestId: string): Promise<void> {
@@ -166,16 +192,70 @@ export async function rejectRequest(requestId: string): Promise<void> {
   );
 }
 
+// Used by /request page: out-of-playlist song request (free, no token)
+// Upserts song to songs table first, then creates pending request
+export async function createSongRequest(
+  track: { spotifyTrackId: string; title: string; artist: string; album: string; albumArt: string | null; durationMs: number },
+  sessionId: string
+): Promise<{ ok: boolean; reason?: string }> {
+  // Upsert song
+  const { error: songErr } = await supabase.from('songs').upsert(
+    {
+      spotify_track_id: track.spotifyTrackId,
+      title: track.title,
+      artist: track.artist,
+      album: track.album,
+      album_art: track.albumArt,
+      duration_ms: track.durationMs,
+    },
+    { onConflict: 'spotify_track_id' }
+  );
+  if (songErr) return { ok: false, reason: songErr.message };
+
+  // Get song id
+  const { data: songRow } = await supabase
+    .from('songs')
+    .select('id')
+    .eq('spotify_track_id', track.spotifyTrackId)
+    .single();
+
+  if (!songRow) return { ok: false, reason: 'Song upsert failed' };
+
+  // Check if already requested (pending) for this venue
+  const { data: existing } = await supabase
+    .from('song_requests')
+    .select('id')
+    .eq('venue_id', DEFAULT_VENUE_ID)
+    .eq('song_id', songRow.id)
+    .in('status', ['pending', 'accepted'])
+    .maybeSingle();
+
+  if (existing) return { ok: false, reason: 'already_requested' };
+
+  await supabase.from('song_requests').insert({
+    venue_id: DEFAULT_VENUE_ID,
+    song_id: songRow.id,
+    session_id: sessionId,
+    tokens_spent: 0,
+    status: 'pending',
+  });
+
+  publish(EventType.SONG_REQUESTED, { songId: songRow.id, sessionId }).catch(
+    (err) => console.error('[db] publish SONG_REQUESTED failed:', err)
+  );
+
+  return { ok: true };
+}
+
+// Legacy: kept for any existing callers, no longer used by browse page
 export async function insertSongRequest(songId: string, sessionId: string): Promise<void> {
   await supabase.from('song_requests').insert({
     venue_id: DEFAULT_VENUE_ID,
     song_id: songId,
+    session_id: sessionId,
     tokens_spent: 1,
-    status: 'pending',
+    status: 'accepted',
   });
-  publish(EventType.SONG_REQUESTED, { songId, sessionId }).catch(
-    (err) => console.error('[db] publish SONG_REQUESTED failed:', err)
-  );
 }
 
 // ── Token Balances ────────────────────────────────────────────

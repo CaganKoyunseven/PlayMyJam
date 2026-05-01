@@ -3,6 +3,10 @@
 -- Run in Supabase SQL Editor after migration.sql
 -- ============================================================
 
+-- Add session_id column for anonymous request tracking
+alter table public.song_requests
+  add column if not exists session_id text;
+
 -- Allow updating song_requests status (approve/reject)
 drop policy if exists "song_requests_anon_update" on public.song_requests;
 create policy "song_requests_anon_update" on public.song_requests
