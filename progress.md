@@ -159,7 +159,7 @@ publish(type, payload)
 /admin → username + password form
   → POST /api/admin/login → validates ADMIN_USERNAME + ADMIN_PASSWORD env vars
   → sets httpOnly cookie pmj_admin
-  → middleware.ts guards /admin/dashboard — redirects if cookie invalid
+  → proxy.ts guards /admin/dashboard — redirects if cookie invalid (Next.js 16: middleware → proxy)
 
 /admin/dashboard (3 tabs):
   → "Requests" tab: pending song_requests (Realtime)
@@ -169,7 +169,8 @@ publish(type, payload)
       → ▶ Play → setNowPlaying() → SONG_STARTED → playback-observer
       → 🗑 Remove → removeQueueItem()
   → "Spotify" tab:
-      → Connect Spotify Account (OAuth) → getSpotifyAuthUrl()
+      → Connect Spotify Account → /api/spotify/connect (server route, client can't read SPOTIFY_CLIENT_ID)
+      → OAuth Authorization Code Flow → /api/spotify/callback → tokens saved to venues table
       → Lists venue's Spotify playlists → Import → importPlaylist()
       → Shows already-imported playlists
 ```
@@ -227,6 +228,10 @@ ADMIN_PASSWORD=           # server-only, stored as httpOnly cookie hash
 
 ### Commit History (key commits on this branch)
 ```
+5a5408e  revert: remove --experimental-https, back to plain next dev
+f3e6a10  fix: proxy.ts export renamed to proxy (Next.js 16)
+c664580  fix: Spotify connect + search via server routes (client can't access server env vars)
+c4bb713  feat: admin panel Spotify tab (connect + playlist import)
 85fd81d  fix: Spotify search via server route, admin username+password auth with httpOnly cookie
 92e2850  docs: add progress.md
 5ed791f  feat: two-track request system — playlist direct-to-queue vs out-of-playlist admin approval
@@ -249,6 +254,7 @@ ADMIN_PASSWORD=           # server-only, stored as httpOnly cookie hash
 - [ ] Admin: option to also add approved request directly to queue (currently only adds to library)
 - [ ] Multi-venue support (DEFAULT_VENUE_ID is hardcoded for now)
 - [ ] `/venue` standalone page is now redundant — admin Spotify tab replaces it
+- [ ] **[BLOCKED]** Spotify OAuth requires HTTPS redirect URI. `http://localhost` rejected by Spotify Dashboard. `https://localhost` rejected by Spotify as "Insecure". mkcert generates valid cert but Chrome doesn't load it reliably in dev. **Fix: deploy to production (Vercel) and use real HTTPS domain.**
 
 ---
 
