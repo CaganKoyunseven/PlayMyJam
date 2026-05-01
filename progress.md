@@ -16,7 +16,7 @@ The DJ/admin manages the queue from a panel and approves out-of-playlist song re
 | UI | React 19, TypeScript, Tailwind CSS v4 |
 | Backend/DB | Supabase (PostgreSQL + Realtime WebSocket) |
 | Music | Spotify Web API + Web Playback SDK |
-| Auth | Supabase Auth (users) + PIN (admin) |
+| Auth | Supabase Auth (users) + username/password httpOnly cookie (admin) |
 
 ---
 
@@ -54,9 +54,9 @@ app/
   queue/page.tsx            — Live queue + Now Playing
   browse/page.tsx           — Browse venue playlist, pay token, add to queue
   request/page.tsx          — Search Spotify, request out-of-playlist song (free)
-  admin/page.tsx            — Admin PIN login
-  admin/dashboard/page.tsx  — Admin panel (requests + queue management)
-  venue/page.tsx            — Venue settings (Spotify connection, playlist import)
+  admin/page.tsx            — Admin login (username + password form)
+  admin/dashboard/page.tsx  — Admin panel: Requests tab, Queue tab, Spotify tab (connect + import)
+  venue/page.tsx            — Venue settings (standalone page, same as admin Spotify tab)
   tokens/page.tsx           — Token purchase (placeholder)
   profile/page.tsx          — User profile (placeholder)
   login/page.tsx            — Login page (placeholder)
@@ -64,6 +64,9 @@ app/
   api/
     spotify/callback/       — Spotify OAuth callback → save tokens to DB
     spotify/token/          — Serve venue access token to Playback SDK
+    spotify/search/         — Server-side Spotify search proxy (client can't use server env vars)
+    admin/login/            — POST: validate ADMIN_USERNAME + ADMIN_PASSWORD, set httpOnly cookie
+    admin/logout/           — POST: clear admin session cookie
 
 lib/
   supabase.ts               — Supabase client (with build-time placeholder)
@@ -87,7 +90,9 @@ components/
 supabase/
   migration.sql             — Main DB schema
   events.sql                — Events table
-  admin.sql                 — Admin patches
+  admin.sql                 — Admin patches (session_id column, update RLS)
+
+middleware.ts               — Edge middleware: protects /admin/dashboard, validates httpOnly cookie
 ```
 
 ---
@@ -151,14 +156,22 @@ publish(type, payload)
 
 ### Flow 3 — Admin Panel
 ```
-/admin → 4-digit PIN (NEXT_PUBLIC_ADMIN_PIN env, default: 1234)
-  → /admin/dashboard
-    → "Requests" tab: pending song_requests (Realtime)
-      → Approve → approveRequest()
+/admin → username + password form
+  → POST /api/admin/login → validates ADMIN_USERNAME + ADMIN_PASSWORD env vars
+  → sets httpOnly cookie pmj_admin
+  → middleware.ts guards /admin/dashboard — redirects if cookie invalid
+
+/admin/dashboard (3 tabs):
+  → "Requests" tab: pending song_requests (Realtime)
+      → Approve → approveRequest() → SONG_ADDED_TO_LIBRARY event
       → Reject  → rejectRequest()
-    → "Queue" tab: active queue_items (Realtime)
+  → "Queue" tab: active queue_items (Realtime)
       → ▶ Play → setNowPlaying() → SONG_STARTED → playback-observer
       → 🗑 Remove → removeQueueItem()
+  → "Spotify" tab:
+      → Connect Spotify Account (OAuth) → getSpotifyAuthUrl()
+      → Lists venue's Spotify playlists → Import → importPlaylist()
+      → Shows already-imported playlists
 ```
 
 ### Flow 4 — Venue Setup
@@ -198,8 +211,9 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SPOTIFY_CLIENT_ID=
 SPOTIFY_CLIENT_SECRET=
-NEXT_PUBLIC_SPOTIFY_REDIRECT_URI=http://localhost:3000/api/spotify/callback
-NEXT_PUBLIC_ADMIN_PIN=1234
+SPOTIFY_REDIRECT_URI=http://localhost:3000/api/spotify/callback
+ADMIN_USERNAME=           # server-only, never exposed to client
+ADMIN_PASSWORD=           # server-only, stored as httpOnly cookie hash
 ```
 
 ---
@@ -213,6 +227,8 @@ NEXT_PUBLIC_ADMIN_PIN=1234
 
 ### Commit History (key commits on this branch)
 ```
+85fd81d  fix: Spotify search via server route, admin username+password auth with httpOnly cookie
+92e2850  docs: add progress.md
 5ed791f  feat: two-track request system — playlist direct-to-queue vs out-of-playlist admin approval
 288d9f2  feat: admin panel with PIN login, request approval, queue management
 4afae9a  feat: add event-driven architecture with observer pattern
@@ -230,8 +246,9 @@ NEXT_PUBLIC_ADMIN_PIN=1234
 - [ ] QR code generation (venue-specific link)
 - [ ] Auth: currently anonymous session (localStorage UUID), real Supabase Auth can be added
 - [ ] Zero-token guard with top-up prompt on browse
-- [ ] Admin: auto-add approved request to queue (currently only adds to library)
+- [ ] Admin: option to also add approved request directly to queue (currently only adds to library)
 - [ ] Multi-venue support (DEFAULT_VENUE_ID is hardcoded for now)
+- [ ] `/venue` standalone page is now redundant — admin Spotify tab replaces it
 
 ---
 
