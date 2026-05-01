@@ -123,6 +123,49 @@ export async function setNowPlaying(id: string, spotifyTrackUri?: string, device
 
 // ── Song Requests ─────────────────────────────────────────────
 
+export type SongRequest = {
+  id: string;
+  songId: string;
+  title: string;
+  artist: string;
+  albumArt: string;
+  tokensSpent: number;
+  requestedAt: string;
+};
+
+export async function getPendingRequests(): Promise<SongRequest[]> {
+  const { data } = await supabase
+    .from('song_requests')
+    .select('id, song_id, tokens_spent, requested_at, songs(title, artist, album_art)')
+    .eq('venue_id', DEFAULT_VENUE_ID)
+    .eq('status', 'pending')
+    .order('requested_at', { ascending: true });
+
+  return (data ?? []).map((row: any) => ({
+    id: row.id,
+    songId: row.song_id,
+    title: row.songs?.title ?? '',
+    artist: row.songs?.artist ?? '',
+    albumArt: row.songs?.album_art ?? '',
+    tokensSpent: row.tokens_spent,
+    requestedAt: row.requested_at,
+  }));
+}
+
+export async function approveRequest(requestId: string, songId: string): Promise<void> {
+  await supabase.from('song_requests').update({ status: 'accepted' }).eq('id', requestId);
+  publish(EventType.SONG_APPROVED, { requestId, songId }).catch(
+    (err) => console.error('[db] publish SONG_APPROVED failed:', err)
+  );
+}
+
+export async function rejectRequest(requestId: string): Promise<void> {
+  await supabase.from('song_requests').update({ status: 'rejected' }).eq('id', requestId);
+  publish(EventType.SONG_REJECTED, { requestId }).catch(
+    (err) => console.error('[db] publish SONG_REJECTED failed:', err)
+  );
+}
+
 export async function insertSongRequest(songId: string, sessionId: string): Promise<void> {
   await supabase.from('song_requests').insert({
     venue_id: DEFAULT_VENUE_ID,

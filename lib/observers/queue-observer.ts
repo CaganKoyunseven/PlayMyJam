@@ -1,4 +1,4 @@
-import { subscribe, publish, EventType } from '../event-bus';
+import { subscribe, EventType } from '../event-bus';
 import { insertQueueItem } from '../db';
 
 export function initQueueObserver(): () => void {
@@ -6,9 +6,6 @@ export function initQueueObserver(): () => void {
     EventType.SONG_APPROVED,
     async (event) => {
       await insertQueueItem(event.payload.songId);
-      publish(EventType.SONG_ADDED_TO_QUEUE, { songId: event.payload.songId }).catch(
-        (err) => console.error('[QueueObserver] publish failed:', err)
-      );
     }
   );
 }
