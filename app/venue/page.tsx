@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import BottomNav from '@/components/bottom-nav';
-import { getSpotifyAuthUrl, getVenueToken } from '@/lib/spotify-auth';
+import { getVenueToken } from '@/lib/spotify-auth';
 import { getVenuePlaylists, importPlaylist, checkSpotifyConnection, SpotifyPlaylist } from '@/lib/spotify-api';
 import { getVenueImportedPlaylists, PlaylistRow } from '@/lib/db';
 
@@ -98,7 +98,7 @@ export default function VenuePage() {
 
           {spotifyPlaylists.length === 0 ? (
             <a
-              href={getSpotifyAuthUrl()}
+              href="/api/spotify/connect"
               className="flex h-11 items-center justify-center gap-2 rounded-xl font-bold text-sm text-white transition-all active:scale-95"
               style={{ background: '#1DB954' }}
             >

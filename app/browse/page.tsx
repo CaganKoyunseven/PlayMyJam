@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import BottomNav from '@/components/bottom-nav';
-import { getVenueImportedPlaylists, getPlaylistSongs, insertQueueItem, insertSongRequest, getOrCreateTokenBalance, deductToken, PlaylistRow, QueueItem } from '@/lib/db';
+import { getVenueImportedPlaylists, getPlaylistSongs, insertQueueItem, getOrCreateTokenBalance, deductToken, PlaylistRow, QueueItem } from '@/lib/db';
 
 const SESSION_KEY = 'pmj_session_id';
 
@@ -60,7 +60,6 @@ export default function BrowsePage() {
     }
     setTokenBalance(balance);
     await insertQueueItem(song.songId);
-    await insertSongRequest(song.songId, sid);
     setAddedIds((prev) => new Set(prev).add(song.songId));
     showToast('Added to queue!');
     router.push('/queue');

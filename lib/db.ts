@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { DEFAULT_VENUE_ID } from './constants';
+import { publish, EventType } from './event-bus';
 
 export type QueueEntry = {
   id: string;
@@ -99,6 +100,9 @@ export async function insertQueueItem(songId: string, position?: number): Promis
     position: pos,
     is_playing: false,
   });
+  publish(EventType.SONG_ADDED_TO_QUEUE, { songId }).catch(
+    (err) => console.error('[db] publish SONG_ADDED_TO_QUEUE failed:', err)
+  );
 }
 
 export async function updateQueueItemPosition(id: string, position: number): Promise<void> {
@@ -109,19 +113,148 @@ export async function removeQueueItem(id: string): Promise<void> {
   await supabase.from('queue_items').delete().eq('id', id);
 }
 
-export async function setNowPlaying(id: string): Promise<void> {
+export async function setNowPlaying(id: string, spotifyTrackUri?: string, deviceId?: string): Promise<void> {
   await supabase.from('queue_items').update({ is_playing: false }).eq('venue_id', DEFAULT_VENUE_ID);
   await supabase.from('queue_items').update({ is_playing: true }).eq('id', id);
+  publish(EventType.SONG_STARTED, { queueItemId: id, spotifyTrackUri: spotifyTrackUri ?? '', deviceId: deviceId ?? '' }).catch(
+    (err) => console.error('[db] publish SONG_STARTED failed:', err)
+  );
 }
 
 // ── Song Requests ─────────────────────────────────────────────
 
-export async function insertSongRequest(songId: string, _sessionId: string): Promise<void> {
+export type SongRequest = {
+  id: string;
+  songId: string;
+  title: string;
+  artist: string;
+  albumArt: string;
+  sessionId: string | null;
+  requestedAt: string;
+};
+
+export async function getPendingRequests(): Promise<SongRequest[]> {
+  const { data } = await supabase
+    .from('song_requests')
+    .select('id, song_id, session_id, requested_at, songs(title, artist, album_art)')
+    .eq('venue_id', DEFAULT_VENUE_ID)
+    .eq('status', 'pending')
+    .order('requested_at', { ascending: true });
+
+  return (data ?? []).map((row: any) => ({
+    id: row.id,
+    songId: row.song_id,
+    title: row.songs?.title ?? '',
+    artist: row.songs?.artist ?? '',
+    albumArt: row.songs?.album_art ?? '',
+    sessionId: row.session_id ?? null,
+    requestedAt: row.requested_at,
+  }));
+}
+
+// Admin approves an out-of-playlist request:
+// adds the song to all venue playlists + publishes SONG_ADDED_TO_LIBRARY
+export async function approveRequest(requestId: string, songId: string, sessionId: string | null): Promise<void> {
+  // Get song info for notification payload
+  const { data: song } = await supabase
+    .from('songs')
+    .select('title, artist')
+    .eq('id', songId)
+    .single();
+
+  // Add song to all venue playlists so it shows up in browse
+  const { data: playlists } = await supabase
+    .from('playlists')
+    .select('id')
+    .eq('venue_id', DEFAULT_VENUE_ID);
+
+  if (playlists && playlists.length > 0) {
+    await supabase.from('playlist_songs').upsert(
+      playlists.map((pl) => ({ playlist_id: pl.id, song_id: songId, position: 99999 })),
+      { onConflict: 'playlist_id,song_id' }
+    );
+  }
+
+  await supabase.from('song_requests').update({ status: 'accepted' }).eq('id', requestId);
+
+  publish(EventType.SONG_ADDED_TO_LIBRARY, {
+    songId,
+    title: song?.title ?? '',
+    artist: song?.artist ?? '',
+    requestedBySessionId: sessionId,
+  }).catch((err) => console.error('[db] publish SONG_ADDED_TO_LIBRARY failed:', err));
+}
+
+export async function rejectRequest(requestId: string): Promise<void> {
+  await supabase.from('song_requests').update({ status: 'rejected' }).eq('id', requestId);
+  publish(EventType.SONG_REJECTED, { requestId }).catch(
+    (err) => console.error('[db] publish SONG_REJECTED failed:', err)
+  );
+}
+
+// Used by /request page: out-of-playlist song request (free, no token)
+// Upserts song to songs table first, then creates pending request
+export async function createSongRequest(
+  track: { spotifyTrackId: string; title: string; artist: string; album: string; albumArt: string | null; durationMs: number },
+  sessionId: string
+): Promise<{ ok: boolean; reason?: string }> {
+  // Upsert song
+  const { error: songErr } = await supabase.from('songs').upsert(
+    {
+      spotify_track_id: track.spotifyTrackId,
+      title: track.title,
+      artist: track.artist,
+      album: track.album,
+      album_art: track.albumArt,
+      duration_ms: track.durationMs,
+    },
+    { onConflict: 'spotify_track_id' }
+  );
+  if (songErr) return { ok: false, reason: songErr.message };
+
+  // Get song id
+  const { data: songRow } = await supabase
+    .from('songs')
+    .select('id')
+    .eq('spotify_track_id', track.spotifyTrackId)
+    .single();
+
+  if (!songRow) return { ok: false, reason: 'Song upsert failed' };
+
+  // Check if already requested (pending) for this venue
+  const { data: existing } = await supabase
+    .from('song_requests')
+    .select('id')
+    .eq('venue_id', DEFAULT_VENUE_ID)
+    .eq('song_id', songRow.id)
+    .in('status', ['pending', 'accepted'])
+    .maybeSingle();
+
+  if (existing) return { ok: false, reason: 'already_requested' };
+
+  await supabase.from('song_requests').insert({
+    venue_id: DEFAULT_VENUE_ID,
+    song_id: songRow.id,
+    session_id: sessionId,
+    tokens_spent: 0,
+    status: 'pending',
+  });
+
+  publish(EventType.SONG_REQUESTED, { songId: songRow.id, sessionId }).catch(
+    (err) => console.error('[db] publish SONG_REQUESTED failed:', err)
+  );
+
+  return { ok: true };
+}
+
+// Legacy: kept for any existing callers, no longer used by browse page
+export async function insertSongRequest(songId: string, sessionId: string): Promise<void> {
   await supabase.from('song_requests').insert({
     venue_id: DEFAULT_VENUE_ID,
     song_id: songId,
+    session_id: sessionId,
     tokens_spent: 1,
-    status: 'pending',
+    status: 'accepted',
   });
 }
 
@@ -155,6 +288,10 @@ export async function deductToken(sessionId: string): Promise<{ ok: boolean; bal
     .from('token_balances')
     .update({ balance: newBalance, updated_at: new Date().toISOString() })
     .eq('session_id', sessionId);
+
+  publish(EventType.TOKEN_SPENT, { sessionId, amount: 1, newBalance }).catch(
+    (err) => console.error('[db] publish TOKEN_SPENT failed:', err)
+  );
 
   return { ok: true, balance: newBalance };
 }

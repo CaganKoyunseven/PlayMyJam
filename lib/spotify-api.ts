@@ -143,12 +143,37 @@ export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playl
   return { playlistId, imported: tracks.length };
 }
 
+// ── Track search (client credentials) ────────────────────────
+
+export type SpotifyTrackResult = {
+  spotifyTrackId: string;
+  title: string;
+  artist: string;
+  album: string;
+  albumArt: string | null;
+  durationMs: number;
+};
+
+export async function searchTracks(query: string): Promise<SpotifyTrackResult[]> {
+  if (!query.trim()) return [];
+  const res = await fetch(`/api/spotify/search?q=${encodeURIComponent(query.trim())}`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
 // ── Playback (requires venue token + Spotify Premium) ─────────
 
 export async function startPlayback(deviceId: string, spotifyPlaylistUri: string) {
   return spotifyFetch(`/me/player/play?device_id=${deviceId}`, true, {
     method: 'PUT',
     body: JSON.stringify({ context_uri: spotifyPlaylistUri }),
+  });
+}
+
+export async function playTrack(deviceId: string, trackUri: string) {
+  return spotifyFetch(`/me/player/play?device_id=${deviceId}`, true, {
+    method: 'PUT',
+    body: JSON.stringify({ uris: [trackUri] }),
   });
 }
 
