@@ -4,7 +4,13 @@ import { supabase } from '@/lib/supabase';
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(req: NextRequest) {
-  const { login } = (await req.json()) as { login: string };
+  let login: string;
+  try {
+    const body = await req.json();
+    login = body.login ?? '';
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
 
   if (!login) {
     return NextResponse.json({ error: 'Login required' }, { status: 400 });
@@ -27,6 +33,10 @@ export async function POST(req: NextRequest) {
 
     if (!data) {
       return NextResponse.json({ error: 'Username not found' }, { status: 404 });
+    }
+
+    if (!data.email) {
+      return NextResponse.json({ error: 'Account has no email on record' }, { status: 404 });
     }
 
     return NextResponse.json({ email: data.email });

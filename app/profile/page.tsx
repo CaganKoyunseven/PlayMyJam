@@ -39,7 +39,7 @@ export default function ProfilePage() {
         .from('profiles')
         .select('username')
         .eq('id', user.id)
-        .single()
+        .maybeSingle()
         .then(({ data }) => {
           if (data?.username) {
             setUsername(data.username);
