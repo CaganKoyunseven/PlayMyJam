@@ -7,11 +7,19 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ available: false });
   }
 
-  const { data } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('username', username)
-    .maybeSingle();
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('username', username)
+      .maybeSingle();
 
-  return NextResponse.json({ available: data === null });
+    if (error) {
+      return NextResponse.json({ error: 'Failed to check username' }, { status: 500 });
+    }
+
+    return NextResponse.json({ available: data === null });
+  } catch {
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
 }
