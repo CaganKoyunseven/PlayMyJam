@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { initSpotifyPlayer, disconnectPlayer, defaultPlaybackState, PlaybackState } from '@/lib/spotify-playback';
 import { pausePlayback, resumePlayback, skipToNext, startPlayback } from '@/lib/spotify-api';
-import { setNowPlaying } from '@/lib/db';
+import { advanceQueue } from '@/lib/db';
 
 type Props = {
   playlistUri?: string;
@@ -42,7 +42,8 @@ export default function NowPlaying({ playlistUri, onTrackChange }: Props) {
       (msg) => {
         setError(msg);
         setLoading(false);
-      }
+      },
+      () => { advanceQueue().catch((err) => console.error('[NowPlaying] advanceQueue failed:', err)); }
     );
 
     return () => {

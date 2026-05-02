@@ -1,28 +1,33 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import BottomNav from '@/components/bottom-nav';
-import { getUserProfile, UserProfile } from '@/lib/db';
-import { supabase } from '@/lib/supabase';
+import { getSessionProfile, SessionProfile } from '@/lib/db';
+
+const SESSION_KEY = 'pmj_session_id';
+
+function getSessionId(): string {
+  if (typeof window === 'undefined') return '';
+  let id = localStorage.getItem(SESSION_KEY);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(SESSION_KEY, id);
+  }
+  return id;
+}
 
 export default function ProfilePage() {
-  const router = useRouter();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<SessionProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getUserProfile().then((p) => {
+    const sid = getSessionId();
+    getSessionProfile(sid).then((p) => {
       setProfile(p);
       setLoading(false);
     });
   }, []);
-
-  async function handleLogout() {
-    await supabase.auth.signOut();
-    router.push('/login');
-  }
 
   if (loading) {
     return (
@@ -32,22 +37,7 @@ export default function ProfilePage() {
     );
   }
 
-  if (!profile) {
-    return (
-      <div className="bg-background-dark relative mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center gap-4">
-        <span className="material-symbols-outlined text-white/20 text-6xl">person_off</span>
-        <p className="text-white/40 text-sm">Sign in to view your profile</p>
-        <Link
-          href="/login"
-          className="rounded-xl px-6 py-3 text-sm font-bold text-white"
-          style={{ background: 'linear-gradient(135deg, #f20da6, #b00b7a)' }}
-        >
-          Sign In
-        </Link>
-        <BottomNav active="profile" />
-      </div>
-    );
-  }
+  const shortId = profile ? profile.sessionId.slice(0, 8).toUpperCase() : '—';
 
   return (
     <div className="bg-background-dark relative mx-auto flex min-h-screen w-full max-w-md flex-col">
@@ -56,68 +46,32 @@ export default function ProfilePage() {
           <span className="material-symbols-outlined">arrow_back</span>
         </button>
         <h2 className="flex-1 pr-10 text-center text-lg font-bold">Profile</h2>
-        <button className="flex size-10 items-center justify-center rounded-full text-white transition-colors hover:bg-white/10">
-          <span className="material-symbols-outlined">settings</span>
-        </button>
       </header>
 
       <div className="flex-1 overflow-y-auto pb-28">
         {/* Avatar + Name */}
         <div className="flex flex-col items-center gap-3 px-6 pt-6 pb-4">
           <div className="relative">
-            <div
-              className="border-primary/40 size-24 rounded-full border-4 bg-cover bg-center shadow-lg bg-surface-dark"
-              style={profile.avatarUrl ? { backgroundImage: `url('${profile.avatarUrl}')` } : {}}
-            />
-            {profile.isPremium && (
-              <div className="absolute -right-1 -bottom-1 flex size-7 items-center justify-center rounded-full bg-yellow-400 shadow">
-                <span
-                  className="material-symbols-outlined text-[16px] text-yellow-900"
-                  style={{ fontVariationSettings: "'FILL' 1" }}
-                >
-                  star
-                </span>
-              </div>
-            )}
+            <div className="border-primary/40 size-24 rounded-full border-4 bg-surface-dark flex items-center justify-center shadow-lg">
+              <span className="material-symbols-outlined text-white/30 text-4xl">person</span>
+            </div>
           </div>
           <div className="text-center">
-            <h1 className="text-2xl font-extrabold">{profile.displayName ?? 'User'}</h1>
-            {profile.username && <p className="text-surface-muted text-sm">@{profile.username}</p>}
+            <h1 className="text-2xl font-extrabold">Guest</h1>
+            <p className="text-white/30 text-xs font-mono mt-0.5">Session #{shortId}</p>
           </div>
-          {!profile.isPremium && (
-            <Link
-              href="/tokens"
-              className="border-primary/40 hover:bg-primary/10 flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-bold text-white transition-colors"
+          <Link
+            href="/tokens"
+            className="border-primary/40 hover:bg-primary/10 flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-bold text-white transition-colors"
+          >
+            <span
+              className="material-symbols-outlined text-primary text-[16px]"
+              style={{ fontVariationSettings: "'FILL' 1" }}
             >
-              <span
-                className="material-symbols-outlined text-primary text-[16px]"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                star
-              </span>
-              Upgrade to Premium
-            </Link>
-          )}
-        </div>
-
-        {/* Stats row */}
-        <div className="mb-6 grid grid-cols-3 gap-3 px-4">
-          {[
-            { label: 'Tokens', value: profile.tokens, icon: 'token', color: 'text-primary' },
-            { label: 'Requests', value: profile.totalRequests, icon: 'queue_music', color: 'text-blue-400' },
-            { label: 'Added', value: profile.songsAdded, icon: 'library_music', color: 'text-green-400' },
-          ].map((stat) => (
-            <div key={stat.label} className="bg-surface-dark flex flex-col items-center gap-1 rounded-xl p-4">
-              <span
-                className={`material-symbols-outlined ${stat.color}`}
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                {stat.icon}
-              </span>
-              <span className="text-2xl font-black">{stat.value}</span>
-              <span className="text-surface-muted text-xs font-medium">{stat.label}</span>
-            </div>
-          ))}
+              star
+            </span>
+            Upgrade to Premium
+          </Link>
         </div>
 
         {/* Token balance card */}
@@ -132,9 +86,10 @@ export default function ProfilePage() {
               </span>
             </div>
             <div>
-              <p className="text-surface-muted text-xs font-medium">Current Balance</p>
+              <p className="text-white/40 text-xs font-medium">Current Balance</p>
               <p className="text-xl font-black">
-                {profile.tokens} <span className="text-surface-muted text-sm font-bold">tokens</span>
+                {profile?.tokenBalance ?? 0}{' '}
+                <span className="text-white/40 text-sm font-bold">tokens</span>
               </p>
             </div>
           </div>
@@ -148,32 +103,28 @@ export default function ProfilePage() {
           </Link>
         </div>
 
-        {/* Info rows */}
+        {/* Quick links */}
         <div className="bg-surface-dark mx-4 mb-6 divide-y divide-white/5 overflow-hidden rounded-xl border border-white/5">
           {[
-            { icon: 'location_on', label: 'Favorite Venue', value: profile.favoriteVenue ?? '—' },
-            { icon: 'calendar_month', label: 'Member Since', value: profile.memberSince },
+            { icon: 'queue_music', label: 'View Queue', href: '/queue' },
+            { icon: 'library_music', label: 'Browse Songs', href: '/browse' },
+            { icon: 'mic', label: 'Request a Song', href: '/request' },
           ].map((item) => (
-            <div key={item.label} className="flex items-center gap-4 px-4 py-3">
-              <span className="material-symbols-outlined text-surface-muted text-[20px]">{item.icon}</span>
-              <div className="flex-1">
-                <p className="text-surface-muted text-xs">{item.label}</p>
-                <p className="text-sm font-semibold">{item.value}</p>
-              </div>
-            </div>
+            <Link
+              key={item.label}
+              href={item.href}
+              className="flex items-center gap-4 px-4 py-3 hover:bg-white/5 transition-colors"
+            >
+              <span className="material-symbols-outlined text-white/40 text-[20px]">{item.icon}</span>
+              <span className="text-sm font-semibold flex-1">{item.label}</span>
+              <span className="material-symbols-outlined text-white/20 text-[16px]">chevron_right</span>
+            </Link>
           ))}
         </div>
 
-        {/* Log out */}
-        <div className="mx-4 mb-4">
-          <button
-            onClick={handleLogout}
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-white/10 text-sm font-semibold text-slate-400 transition-colors hover:border-white/20 hover:text-white"
-          >
-            <span className="material-symbols-outlined text-[20px]">logout</span>
-            Log Out
-          </button>
-        </div>
+        <p className="text-center text-xs text-white/20 mx-4">
+          Your session is stored locally. Tokens reset if you clear browser data.
+        </p>
       </div>
 
       <BottomNav active="profile" />

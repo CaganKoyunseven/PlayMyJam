@@ -1,5 +1,4 @@
 import { teardownEventBus } from '../event-bus';
-import { initQueueObserver } from './queue-observer';
 import { initTokenObserver } from './token-observer';
 import { initPlaybackObserver } from './playback-observer';
 
@@ -11,7 +10,6 @@ export function initObservers(): void {
   initialized = true;
 
   cleanups.push(
-    initQueueObserver(),
     initTokenObserver(),
     initPlaybackObserver()
   );
