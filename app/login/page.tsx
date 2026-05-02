@@ -73,6 +73,13 @@ export default function LoginPage() {
     }
   }
 
+  function handleTabSwitch(t: Tab) {
+    setPwError('');
+    setMagicError('');
+    setMagicSent(false);
+    setTab(t);
+  }
+
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-dark text-white max-w-md mx-auto">
       <div className="flex items-center p-4 pb-2 justify-between">
@@ -105,7 +112,7 @@ export default function LoginPage() {
         {(['password', 'magic'] as Tab[]).map((t) => (
           <button
             key={t}
-            onClick={() => setTab(t)}
+            onClick={() => handleTabSwitch(t)}
             className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${
               tab === t ? 'bg-primary text-white shadow-lg' : 'text-white/50 hover:text-white'
             }`}
