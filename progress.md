@@ -16,13 +16,13 @@ The DJ/admin manages the queue from a panel and approves out-of-playlist song re
 | UI | React 19, TypeScript, Tailwind CSS v4 |
 | Backend/DB | Supabase (PostgreSQL + Realtime WebSocket) |
 | Music | Spotify Web API + Web Playback SDK |
-| Auth | Supabase Auth (users) + username/password httpOnly cookie (admin) |
+| Auth | Supabase Auth (email+password + magic link) + username/password httpOnly cookie (admin) |
 
 ---
 
 ## Database Schema
 
-### Tables (`supabase/migration.sql` + `supabase/events.sql`)
+### Tables (`supabase/migration.sql` + `supabase/events.sql` + `supabase/users.sql`)
 
 ```
 songs              — Track catalog imported from Spotify
@@ -33,12 +33,14 @@ song_requests      — Out-of-playlist track requests (requires admin approval)
 token_balances     — Anonymous session-based token balances
 venues             — Venue records + Spotify tokens
 events             — Event bus table (Realtime pub/sub)
+profiles           — User profiles (username, email) — linked to auth.users
 ```
 
 ### SQL Execution Order
 1. `supabase/migration.sql` — Main schema + RLS + demo venue seed
 2. `supabase/events.sql` — Events table
 3. `supabase/admin.sql` — Admin patches (session_id column, extra RLS policies)
+4. `supabase/users.sql` — Profiles table, RLS, signup trigger (auto-creates profile on new user)
 
 ### Supabase Dashboard Steps
 - **Database → Replication → Tables** → enable Realtime for `events`, `queue_items`, `song_requests`
@@ -57,9 +59,12 @@ app/
   admin/page.tsx            — Admin login (username + password form)
   admin/dashboard/page.tsx  — Admin panel: Requests tab, Queue tab, Spotify tab (connect + import)
   venue/page.tsx            — Venue settings (standalone page, same as admin Spotify tab)
-  tokens/page.tsx           — Token purchase (placeholder)
-  profile/page.tsx          — User profile (placeholder)
-  login/page.tsx            — Login page (placeholder)
+  tokens/page.tsx           — Token purchase (1 token = 50₺, bundle 5 = 200₺)
+  profile/page.tsx          — User profile (username edit, change password, sign out)
+  login/page.tsx            — Login (password tab + magic link tab)
+  register/page.tsx         — Register (username + email + password)
+  forgot-password/page.tsx  — Request password reset email
+  reset-password/page.tsx   — Set new password (from reset link)
 
   api/
     spotify/callback/       — Spotify OAuth callback → save tokens to DB
@@ -67,18 +72,20 @@ app/
     spotify/search/         — Server-side Spotify search proxy (client can't use server env vars)
     admin/login/            — POST: validate ADMIN_USERNAME + ADMIN_PASSWORD, set httpOnly cookie
     admin/logout/           — POST: clear admin session cookie
+    auth/login/             — POST: resolve username → email (for signInWithPassword)
+    auth/check-username/    — GET: check username availability in profiles table
 
 lib/
   supabase.ts               — Supabase client (with build-time placeholder)
   constants.ts              — DEFAULT_VENUE_ID and other constants
   db.ts                     — All database operations
+  auth-context.tsx          — React context: AuthProvider + useAuth() hook (user, session, loading)
   event-bus.ts              — EventBus: publish (write to DB) + subscribe (Realtime)
   spotify-auth.ts           — Client Credentials cache, OAuth flow, token refresh
   spotify-api.ts            — Spotify API calls (search, playlists, playback)
   spotify-playback.ts       — Web Playback SDK init/teardown
   observers/
     index.ts                — initObservers() / teardownObservers()
-    queue-observer.ts       — SONG_APPROVED → insertQueueItem
     token-observer.ts       — TOKEN_PURCHASED → credit balance
     playback-observer.ts    — SONG_STARTED → playTrack()
 
@@ -91,8 +98,10 @@ supabase/
   migration.sql             — Main DB schema
   events.sql                — Events table
   admin.sql                 — Admin patches (session_id column, update RLS)
+  users.sql                 — Profiles table + RLS + auto-create-profile trigger
 
-middleware.ts               — Edge middleware: protects /admin/dashboard, validates httpOnly cookie
+proxy.ts                    — Edge middleware: protects /admin/dashboard, validates httpOnly cookie
+app/admin/dashboard/layout.tsx — Server component double-check for admin auth
 ```
 
 ---
@@ -106,7 +115,7 @@ The app is built on the Observer Pattern. All critical actions are written to th
 | Event | Triggered By | Effect |
 |-------|-------------|--------|
 | `SONG_REQUESTED` | `createSongRequest()` | Appears in admin panel |
-| `SONG_APPROVED` | `approveRequest()` | queue-observer → song added to queue |
+| `SONG_APPROVED` | `approveRequest()` | song added to library (not queue directly) |
 | `SONG_REJECTED` | `rejectRequest()` | Removed from request list |
 | `SONG_ADDED_TO_QUEUE` | `insertQueueItem()` | Queue page updates |
 | `SONG_ADDED_TO_LIBRARY` | `approveRequest()` | Notification sent to all clients |
@@ -244,17 +253,21 @@ c4bb713  feat: admin panel Spotify tab (connect + playlist import)
 
 ## Known Gaps / Next Steps
 
-- [ ] Token purchase flow (`/tokens` page UI done, no real payment gateway wired)
-- [x] User profile (`/profile` — adapted to anonymous session, shows token balance)
+- [ ] Token purchase flow (`/tokens` page UI done, 1=50₺/5=200₺ — no real payment gateway wired)
+- [x] User auth — Supabase Auth with email+password + magic link
+- [x] User profile (`/profile` — username edit, change password, sign out)
+- [x] Register, Login, Forgot Password, Reset Password pages
+- [x] Auth guards — browse open to all; request/queue-add requires login (toast + login link)
 - [x] Admin: queue reordering — up/down arrow buttons on each queue item
 - [x] SONG_FINISHED event — auto-advance: Spotify SDK `player_state_changed` detects track end → `advanceQueue()` removes finished song and sets next as playing
 - [x] QR code generation — admin "QR" tab shows scannable QR linking to `/queue`
-- [ ] Auth: currently anonymous session (localStorage UUID), real Supabase Auth can be added
 - [x] Zero-token guard with top-up prompt on browse (already implemented — toast + early return)
-- [x] Admin: "Approve + Queue" button — approves request AND immediately adds to queue
+- [x] Admin dashboard double-protected (proxy.ts matcher + server component layout.tsx)
 - [ ] Multi-venue support (DEFAULT_VENUE_ID is hardcoded for now)
 - [x] `/venue` standalone page redirect → `/admin/dashboard`
 - [ ] **[BLOCKED]** Spotify OAuth requires HTTPS redirect URI. `http://localhost` rejected by Spotify Dashboard. `https://localhost` rejected by Spotify as "Insecure". mkcert generates valid cert but Chrome doesn't load it reliably in dev. **Fix: deploy to production (Vercel) and use real HTTPS domain.**
+- [ ] Run `supabase/users.sql` in Supabase dashboard to create profiles table + trigger
+- [ ] Enable Email+Password and Magic Link providers in Supabase Auth settings
 
 ---
 

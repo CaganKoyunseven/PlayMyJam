@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import BottomNav from '@/components/bottom-nav';
 import { searchTracks, SpotifyTrackResult } from '@/lib/spotify-api';
 import { createSongRequest } from '@/lib/db';
+import { useAuth } from '@/lib/auth-context';
 
 const SESSION_KEY = 'pmj_session_id';
 
@@ -24,6 +26,7 @@ export default function RequestPage() {
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -49,6 +52,10 @@ export default function RequestPage() {
   }
 
   async function handleRequest(track: SpotifyTrackResult) {
+    if (!user) {
+      showToast('You need to log in to request a song', false);
+      return;
+    }
     setLoadingId(track.spotifyTrackId);
     const sid = getSessionId();
     const result = await createSongRequest(track, sid);
@@ -72,10 +79,13 @@ export default function RequestPage() {
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-dark pb-24 max-w-md mx-auto">
       {toast && (
-        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl border text-sm font-medium text-white shadow-xl ${
+        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl border text-sm font-medium text-white shadow-xl flex items-center gap-2 ${
           toast.ok ? 'bg-surface-dark border-white/10' : 'bg-red-500/20 border-red-500/30'
         }`}>
-          {toast.msg}
+          <span>{toast.msg}</span>
+          {!toast.ok && !user && (
+            <Link href="/login" className="text-primary font-bold underline whitespace-nowrap">Log in</Link>
+          )}
         </div>
       )}
 
