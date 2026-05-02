@@ -233,13 +233,18 @@ export async function createSongRequest(
 
   if (existing) return { ok: false, reason: 'already_requested' };
 
-  await supabase.from('song_requests').insert({
+  const { error: insertErr } = await supabase.from('song_requests').insert({
     venue_id: DEFAULT_VENUE_ID,
     song_id: songRow.id,
     session_id: sessionId,
     tokens_spent: 0,
     status: 'pending',
   });
+
+  if (insertErr) {
+    console.error('[db] song_requests insert failed:', insertErr.message);
+    return { ok: false, reason: insertErr.message };
+  }
 
   publish(EventType.SONG_REQUESTED, { songId: songRow.id, sessionId }).catch(
     (err) => console.error('[db] publish SONG_REQUESTED failed:', err)
