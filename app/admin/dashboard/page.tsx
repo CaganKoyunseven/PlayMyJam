@@ -8,7 +8,6 @@ import {
   getPendingRequests,
   getQueueItems,
   approveRequest,
-  approveAndAddToQueue,
   rejectRequest,
   removeQueueItem,
   setNowPlaying,
@@ -135,13 +134,6 @@ export default function AdminDashboard() {
     setActing(null);
   }
 
-  async function handleApproveAndQueue(req: SongRequest) {
-    setActing(req.id + '_queue');
-    await approveAndAddToQueue(req.id, req.songId, req.sessionId);
-    setRequests((prev) => prev.filter((r) => r.id !== req.id));
-    await loadQueue();
-    setActing(null);
-  }
 
   async function handleMoveUp(item: QueueItem, index: number) {
     if (index === 0) return;
@@ -290,28 +282,17 @@ export default function AdminDashboard() {
                 </div>
                 <div className="flex flex-col gap-1.5 shrink-0">
                   <button
-                    onClick={() => handleApproveAndQueue(req)}
-                    disabled={acting === req.id || acting === req.id + '_queue'}
-                    className="flex h-8 w-24 items-center justify-center gap-1 rounded-xl bg-primary/20 text-primary text-xs font-bold active:scale-95 transition-all disabled:opacity-50"
-                    title="Approve and add to queue"
-                  >
-                    {acting === req.id + '_queue'
-                      ? <span className="material-symbols-outlined text-[14px] animate-spin">refresh</span>
-                      : <><span className="material-symbols-outlined text-[14px]">playlist_add</span> + Queue</>}
-                  </button>
-                  <button
                     onClick={() => handleApprove(req)}
-                    disabled={acting === req.id || acting === req.id + '_queue'}
+                    disabled={acting === req.id}
                     className="flex h-8 w-24 items-center justify-center gap-1 rounded-xl bg-green-500/20 text-green-400 text-xs font-bold active:scale-95 transition-all disabled:opacity-50"
-                    title="Approve only (adds to library)"
                   >
                     {acting === req.id
                       ? <span className="material-symbols-outlined text-[14px] animate-spin">refresh</span>
-                      : <><span className="material-symbols-outlined text-[14px]">check</span> Library</>}
+                      : <><span className="material-symbols-outlined text-[14px]">check</span> Approve</>}
                   </button>
                   <button
                     onClick={() => handleReject(req)}
-                    disabled={acting === req.id || acting === req.id + '_queue'}
+                    disabled={acting === req.id}
                     className="flex h-8 w-24 items-center justify-center gap-1 rounded-xl bg-red-500/20 text-red-400 text-xs font-bold active:scale-95 transition-all disabled:opacity-50"
                   >
                     <span className="material-symbols-outlined text-[14px]">close</span> Reject

@@ -185,11 +185,6 @@ export async function approveRequest(requestId: string, songId: string, sessionI
   }).catch((err) => console.error('[db] publish SONG_ADDED_TO_LIBRARY failed:', err));
 }
 
-// Admin approves and immediately adds to queue
-export async function approveAndAddToQueue(requestId: string, songId: string, sessionId: string | null): Promise<void> {
-  await approveRequest(requestId, songId, sessionId);
-  await insertQueueItem(songId);
-}
 
 export async function rejectRequest(requestId: string): Promise<void> {
   await supabase.from('song_requests').update({ status: 'rejected' }).eq('id', requestId);
