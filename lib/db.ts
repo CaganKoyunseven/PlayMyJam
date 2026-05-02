@@ -185,6 +185,12 @@ export async function approveRequest(requestId: string, songId: string, sessionI
   }).catch((err) => console.error('[db] publish SONG_ADDED_TO_LIBRARY failed:', err));
 }
 
+// Admin approves and immediately adds to queue
+export async function approveAndAddToQueue(requestId: string, songId: string, sessionId: string | null): Promise<void> {
+  await approveRequest(requestId, songId, sessionId);
+  await insertQueueItem(songId);
+}
+
 export async function rejectRequest(requestId: string): Promise<void> {
   await supabase.from('song_requests').update({ status: 'rejected' }).eq('id', requestId);
   publish(EventType.SONG_REJECTED, { requestId }).catch(
@@ -339,6 +345,40 @@ export async function getPlaylistSongs(playlistId: string): Promise<QueueItem[]>
     albumArt: row.songs.album_art ?? '',
     durationMs: row.songs.duration_ms ?? 0,
   }));
+}
+
+// Auto-advance queue when current song finishes
+export async function advanceQueue(): Promise<void> {
+  const items = await getQueueItems();
+  const playing = items.find((i) => i.isPlaying);
+  const upNext = items.filter((i) => !i.isPlaying).sort((a, b) => a.position - b.position)[0];
+
+  if (playing) {
+    await removeQueueItem(playing.id);
+  }
+
+  if (upNext) {
+    await setNowPlaying(upNext.id);
+    publish(EventType.SONG_FINISHED, { finishedId: playing?.id ?? null, nextId: upNext.id }).catch(
+      (err) => console.error('[db] publish SONG_FINISHED failed:', err)
+    );
+  } else {
+    publish(EventType.SONG_FINISHED, { finishedId: playing?.id ?? null, nextId: null }).catch(
+      (err) => console.error('[db] publish SONG_FINISHED failed:', err)
+    );
+  }
+}
+
+// ── Session Profile ───────────────────────────────────────────
+
+export type SessionProfile = {
+  sessionId: string;
+  tokenBalance: number;
+};
+
+export async function getSessionProfile(sessionId: string): Promise<SessionProfile> {
+  const tokenBalance = await getOrCreateTokenBalance(sessionId);
+  return { sessionId, tokenBalance };
 }
 
 // ── User Profile ──────────────────────────────────────────────

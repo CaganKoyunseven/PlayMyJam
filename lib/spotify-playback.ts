@@ -36,7 +36,8 @@ export function initSpotifyPlayer(
   getToken: () => Promise<string>,
   onStateChange: (state: PlaybackState) => void,
   onReady: (deviceId: string) => void,
-  onError: (msg: string) => void
+  onError: (msg: string) => void,
+  onTrackEnd?: () => void
 ): Promise<void> {
   return new Promise((resolve) => {
     if (player) {
@@ -60,9 +61,25 @@ export function initSpotifyPlayer(
 
       player.addListener('not_ready', () => onError('Player not ready'));
 
+      let lastTrackId: string | null = null;
+
       player.addListener('player_state_changed', (state: any) => {
         if (!state) return;
         const track = state.track_window?.current_track;
+        const currentTrackId = track?.id ?? null;
+
+        // Track ended: paused at position 0 and we had a previous track playing
+        if (
+          state.paused &&
+          state.position === 0 &&
+          lastTrackId !== null &&
+          lastTrackId !== currentTrackId
+        ) {
+          onTrackEnd?.();
+        }
+
+        lastTrackId = currentTrackId;
+
         onStateChange({
           isPlaying: !state.paused,
           trackName: track?.name ?? '',

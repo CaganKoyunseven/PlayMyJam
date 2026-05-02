@@ -2,14 +2,17 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { QRCodeSVG } from 'qrcode.react';
 import { supabase } from '@/lib/supabase';
 import {
   getPendingRequests,
   getQueueItems,
   approveRequest,
+  approveAndAddToQueue,
   rejectRequest,
   removeQueueItem,
   setNowPlaying,
+  updateQueueItemPosition,
   getVenueImportedPlaylists,
   SongRequest,
   QueueItem,
@@ -27,7 +30,7 @@ function timeAgo(iso: string): string {
   return `${Math.floor(diff / 3600)}h ago`;
 }
 
-type Tab = 'requests' | 'queue' | 'spotify';
+type Tab = 'requests' | 'queue' | 'spotify' | 'qr';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -132,6 +135,38 @@ export default function AdminDashboard() {
     setActing(null);
   }
 
+  async function handleApproveAndQueue(req: SongRequest) {
+    setActing(req.id + '_queue');
+    await approveAndAddToQueue(req.id, req.songId, req.sessionId);
+    setRequests((prev) => prev.filter((r) => r.id !== req.id));
+    await loadQueue();
+    setActing(null);
+  }
+
+  async function handleMoveUp(item: QueueItem, index: number) {
+    if (index === 0) return;
+    const above = queue[index - 1];
+    setActing(item.id + '_move');
+    await Promise.all([
+      updateQueueItemPosition(item.id, above.position),
+      updateQueueItemPosition(above.id, item.position),
+    ]);
+    await loadQueue();
+    setActing(null);
+  }
+
+  async function handleMoveDown(item: QueueItem, index: number) {
+    if (index === queue.length - 1) return;
+    const below = queue[index + 1];
+    setActing(item.id + '_move');
+    await Promise.all([
+      updateQueueItemPosition(item.id, below.position),
+      updateQueueItemPosition(below.id, item.position),
+    ]);
+    await loadQueue();
+    setActing(null);
+  }
+
   async function handleReject(req: SongRequest) {
     setActing(req.id);
     await rejectRequest(req.id);
@@ -205,6 +240,7 @@ export default function AdminDashboard() {
           { key: 'requests', label: 'Requests', badge: requests.length },
           { key: 'queue',    label: 'Queue',    badge: queue.length },
           { key: 'spotify',  label: 'Spotify',  badge: 0 },
+          { key: 'qr',       label: 'QR',       badge: 0 },
         ] as { key: Tab; label: string; badge: number }[]).map(({ key, label, badge }) => (
           <button
             key={key}
@@ -254,18 +290,29 @@ export default function AdminDashboard() {
                 </div>
                 <div className="flex flex-col gap-1.5 shrink-0">
                   <button
+                    onClick={() => handleApproveAndQueue(req)}
+                    disabled={acting === req.id || acting === req.id + '_queue'}
+                    className="flex h-8 w-24 items-center justify-center gap-1 rounded-xl bg-primary/20 text-primary text-xs font-bold active:scale-95 transition-all disabled:opacity-50"
+                    title="Approve and add to queue"
+                  >
+                    {acting === req.id + '_queue'
+                      ? <span className="material-symbols-outlined text-[14px] animate-spin">refresh</span>
+                      : <><span className="material-symbols-outlined text-[14px]">playlist_add</span> + Queue</>}
+                  </button>
+                  <button
                     onClick={() => handleApprove(req)}
-                    disabled={acting === req.id}
-                    className="flex h-8 w-20 items-center justify-center gap-1 rounded-xl bg-green-500/20 text-green-400 text-xs font-bold active:scale-95 transition-all disabled:opacity-50"
+                    disabled={acting === req.id || acting === req.id + '_queue'}
+                    className="flex h-8 w-24 items-center justify-center gap-1 rounded-xl bg-green-500/20 text-green-400 text-xs font-bold active:scale-95 transition-all disabled:opacity-50"
+                    title="Approve only (adds to library)"
                   >
                     {acting === req.id
                       ? <span className="material-symbols-outlined text-[14px] animate-spin">refresh</span>
-                      : <><span className="material-symbols-outlined text-[14px]">check</span> Approve</>}
+                      : <><span className="material-symbols-outlined text-[14px]">check</span> Library</>}
                   </button>
                   <button
                     onClick={() => handleReject(req)}
-                    disabled={acting === req.id}
-                    className="flex h-8 w-20 items-center justify-center gap-1 rounded-xl bg-red-500/20 text-red-400 text-xs font-bold active:scale-95 transition-all disabled:opacity-50"
+                    disabled={acting === req.id || acting === req.id + '_queue'}
+                    className="flex h-8 w-24 items-center justify-center gap-1 rounded-xl bg-red-500/20 text-red-400 text-xs font-bold active:scale-95 transition-all disabled:opacity-50"
                   >
                     <span className="material-symbols-outlined text-[14px]">close</span> Reject
                   </button>
@@ -305,6 +352,24 @@ export default function AdminDashboard() {
                   <p className="text-xs text-slate-400 truncate">{item.artist}</p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex flex-col gap-0.5">
+                    <button
+                      onClick={() => handleMoveUp(item, index)}
+                      disabled={index === 0 || acting === item.id + '_move'}
+                      title="Move up"
+                      className="flex size-4 items-center justify-center rounded text-white/30 hover:text-white disabled:opacity-20 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">arrow_drop_up</span>
+                    </button>
+                    <button
+                      onClick={() => handleMoveDown(item, index)}
+                      disabled={index === queue.length - 1 || acting === item.id + '_move'}
+                      title="Move down"
+                      className="flex size-4 items-center justify-center rounded text-white/30 hover:text-white disabled:opacity-20 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">arrow_drop_down</span>
+                    </button>
+                  </div>
                   <button
                     onClick={() => handleSetNowPlaying(item)}
                     disabled={acting === item.id}
@@ -443,6 +508,39 @@ export default function AdminDashboard() {
                 <p className="text-white/20 text-xs">Connect Spotify above to import playlists</p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── QR Code ── */}
+        {tab === 'qr' && (
+          <div className="flex flex-col items-center gap-6 py-6">
+            <div className="flex flex-col items-center gap-2 text-center">
+              <h3 className="text-base font-bold">Venue QR Code</h3>
+              <p className="text-xs text-slate-400 max-w-[240px]">
+                Customers scan this to see the live queue and request songs.
+              </p>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl shadow-2xl">
+              <QRCodeSVG
+                value={typeof window !== 'undefined' ? `${window.location.origin}/queue` : '/queue'}
+                size={200}
+                bgColor="#ffffff"
+                fgColor="#000000"
+                level="M"
+              />
+            </div>
+
+            <div className="bg-surface-dark rounded-xl border border-white/5 px-4 py-3 flex items-center gap-3 w-full">
+              <span className="material-symbols-outlined text-white/30 text-[18px]">link</span>
+              <span className="text-xs text-white/50 font-mono flex-1 truncate">
+                {typeof window !== 'undefined' ? `${window.location.origin}/queue` : '/queue'}
+              </span>
+            </div>
+
+            <p className="text-[10px] text-white/20 text-center">
+              Post this QR code at your venue for guests to scan.
+            </p>
           </div>
         )}
       </main>

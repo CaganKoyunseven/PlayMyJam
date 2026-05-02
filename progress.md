@@ -244,16 +244,16 @@ c4bb713  feat: admin panel Spotify tab (connect + playlist import)
 
 ## Known Gaps / Next Steps
 
-- [ ] Token purchase flow (`/tokens` page is placeholder)
-- [ ] User profile (`/profile` placeholder)
-- [ ] Admin: drag-and-drop queue reordering (QUEUE_REORDERED event is ready)
-- [ ] SONG_FINISHED event — auto-advance to next song when track ends
-- [ ] QR code generation (venue-specific link)
+- [ ] Token purchase flow (`/tokens` page UI done, no real payment gateway wired)
+- [x] User profile (`/profile` — adapted to anonymous session, shows token balance)
+- [x] Admin: queue reordering — up/down arrow buttons on each queue item
+- [x] SONG_FINISHED event — auto-advance: Spotify SDK `player_state_changed` detects track end → `advanceQueue()` removes finished song and sets next as playing
+- [x] QR code generation — admin "QR" tab shows scannable QR linking to `/queue`
 - [ ] Auth: currently anonymous session (localStorage UUID), real Supabase Auth can be added
-- [ ] Zero-token guard with top-up prompt on browse
-- [ ] Admin: option to also add approved request directly to queue (currently only adds to library)
+- [x] Zero-token guard with top-up prompt on browse (already implemented — toast + early return)
+- [x] Admin: "Approve + Queue" button — approves request AND immediately adds to queue
 - [ ] Multi-venue support (DEFAULT_VENUE_ID is hardcoded for now)
-- [ ] `/venue` standalone page is now redundant — admin Spotify tab replaces it
+- [x] `/venue` standalone page redirect → `/admin/dashboard`
 - [ ] **[BLOCKED]** Spotify OAuth requires HTTPS redirect URI. `http://localhost` rejected by Spotify Dashboard. `https://localhost` rejected by Spotify as "Insecure". mkcert generates valid cert but Chrome doesn't load it reliably in dev. **Fix: deploy to production (Vercel) and use real HTTPS domain.**
 
 ---
