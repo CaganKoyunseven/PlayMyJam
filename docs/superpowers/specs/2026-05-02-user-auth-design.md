@@ -14,20 +14,22 @@ Two options side by side:
 1. **Email or username + password** — API route converts username → email if needed, then `supabase.auth.signInWithPassword()`
 2. **Magic link** — email input, `supabase.auth.signInWithOtp()`. New accounts get `user_XXXXX` username auto-assigned.
 
-"Şifremi Unuttum" link below password field → `/forgot-password` page (email input → Supabase sends reset email → user clicks link → `/reset-password` page with new password form).
+"Forgot Password" link below password field → `/forgot-password` page (email input → Supabase sends reset email → user clicks link → `/reset-password` page with new password form).
 
-"Hesabın yok mu? Kayıt ol" → `/register`
+"Don't have an account? Sign up" → `/register`
 
 ### `/register`
-Fields: username (unique, live check) + email + password.  
+Fields: username (unique, live check) + email + password.
 On submit: `supabase.auth.signUp()` then insert row into `profiles`.
 
+"Already have an account? Log in" → `/login`
+
 ### `/forgot-password`
-Email input → `supabase.auth.resetPasswordForEmail()`.  
-Shows "Email gönderildi" confirmation.
+Email input → `supabase.auth.resetPasswordForEmail()`.
+Shows "Check your email" confirmation.
 
 ### `/reset-password`
-Supabase redirects here with token in URL.  
+Supabase redirects here with token in URL.
 New password + confirm → `supabase.auth.updateUser({ password })`.
 
 ---
@@ -36,11 +38,11 @@ New password + confirm → `supabase.auth.updateUser({ password })`.
 
 Already a placeholder. Adds:
 - **Username**: display + edit field with uniqueness check on blur. Save button.
-- **Şifre Değiştir** section:
-  - Eski şifre + yeni şifre + tekrar (eski şifre required — prevents unauthorized change)
-  - "Şifremi Unuttum" link → `/forgot-password` (for magic-link users with no password)
-  - Submit → `supabase.auth.signInWithPassword(oldPass)` to verify, then `supabase.auth.updateUser({ password: newPass })`
-- **Çıkış Yap** button → `supabase.auth.signOut()`
+- **Change Password** section:
+  - Current password + new password + confirm new password (current password required — prevents unauthorized change)
+  - "Forgot Password" link → `/forgot-password` (for magic-link users with no password)
+  - Submit → verify current password via `supabase.auth.signInWithPassword()`, then `supabase.auth.updateUser({ password: newPassword })`
+- **Sign Out** button → `supabase.auth.signOut()`
 
 ---
 
@@ -49,11 +51,11 @@ Already a placeholder. Adds:
 **Browse** → open to all, no change.
 
 **Request a song** (`/request` page — Request button):
-- If not logged in: toast appears: `"Şarkı istemek için giriş yapman gerekiyor"` with `/login` link.
+- If not logged in: toast: `"You need to log in to request a song"` with link to `/login`.
 - If logged in: existing flow.
 
 **Add to queue** (`/browse` page — Add button):
-- Same toast pattern.
+- Toast: `"You need to log in to add songs to the queue"` with link to `/login`.
 
 ---
 
@@ -116,7 +118,7 @@ On `/register` and `/profile` (username edit):
 - Debounced 400ms on input change
 - `GET /api/auth/check-username?username=X` → queries `profiles` table
 - Returns `{ available: boolean }`
-- Shows "✓ Kullanılabilir" or "✗ Bu kullanıcı adı alınmış" inline
+- Shows "✓ Available" or "✗ Username already taken" inline
 
 ---
 
