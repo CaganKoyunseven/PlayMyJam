@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import BottomNav from '@/components/bottom-nav';
 import { getVenueImportedPlaylists, getPlaylistSongs, insertQueueItem, getOrCreateTokenBalance, deductToken, PlaylistRow, QueueItem } from '@/lib/db';
+import { useAuth } from '@/lib/auth-context';
 
 const SESSION_KEY = 'pmj_session_id';
 
@@ -27,7 +29,8 @@ export default function BrowsePage() {
   const [tokenBalance, setTokenBalance] = useState<number | null>(null);
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
   const [loadingSongs, setLoadingSongs] = useState(false);
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ msg: string; loginLink: boolean } | null>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     getVenueImportedPlaylists().then((pl) => {
@@ -46,12 +49,16 @@ export default function BrowsePage() {
     setLoadingSongs(false);
   }
 
-  function showToast(msg: string) {
-    setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 2500);
+  function showToast(msg: string, loginLink = false) {
+    setToast({ msg, loginLink: loginLink && !user });
+    setTimeout(() => setToast(null), 3000);
   }
 
   async function handleAdd(song: QueueItem) {
+    if (!user) {
+      showToast('You need to log in to add songs to the queue', true);
+      return;
+    }
     const sid = getSessionId();
     const { ok, balance } = await deductToken(sid);
     if (!ok) {
@@ -76,9 +83,12 @@ export default function BrowsePage() {
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-dark pb-24 max-w-md mx-auto">
       {/* Toast */}
-      {toastMsg && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-surface-dark border border-white/10 text-sm font-medium text-white shadow-xl">
-          {toastMsg}
+      {toast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-surface-dark border border-white/10 text-sm font-medium text-white shadow-xl flex items-center gap-2">
+          <span>{toast.msg}</span>
+          {toast.loginLink && (
+            <Link href="/login" className="text-primary font-bold underline whitespace-nowrap">Log in</Link>
+          )}
         </div>
       )}
 
