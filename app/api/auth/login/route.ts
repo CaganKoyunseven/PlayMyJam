@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     .eq('username', login)
     .maybeSingle();
 
-  if (!data?.email) {
+  if (!data) {
     return NextResponse.json({ error: 'Username not found' }, { status: 404 });
   }
 
