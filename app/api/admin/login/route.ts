@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { buildAdminToken } from '@/lib/admin-auth';
 
 export async function POST(req: NextRequest) {
   const { username, password } = await req.json();
@@ -14,13 +15,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
   }
 
-  const token = Buffer.from(`${adminUser}:${adminPass}`).toString('base64');
+  const token = buildAdminToken(adminUser, adminPass);
   const res = NextResponse.json({ ok: true });
   res.cookies.set('pmj_admin', token, {
     httpOnly: true,
     sameSite: 'strict',
     path: '/',
-    maxAge: 60 * 60 * 24, // 24 hours
+    maxAge: 60 * 60 * 24,
   });
   return res;
 }
