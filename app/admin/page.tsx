@@ -1,17 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 export default function AdminLoginPage() {
-  const router = useRouter();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.SyntheticEvent) {
     e.preventDefault();
     if (!username.trim() || !password) return;
 
@@ -26,7 +24,7 @@ export default function AdminLoginPage() {
       });
 
       if (res.ok) {
-        router.push('/admin/dashboard');
+        window.location.href = '/admin/dashboard';
       } else {
         const data = await res.json();
         setError(data.error ?? 'Login failed');
