@@ -280,21 +280,29 @@ export async function getOrCreateTokenBalance(sessionId: string): Promise<number
 }
 
 export async function deductToken(sessionId: string): Promise<{ ok: boolean; balance: number }> {
-  const { data } = await supabase
+  const { data: current } = await supabase
     .from('token_balances')
     .select('balance')
     .eq('session_id', sessionId)
-    .single();
+    .maybeSingle();
 
-  const current = data?.balance ?? 0;
-  if (current < 1) return { ok: false, balance: current };
+  const balance = current?.balance ?? 0;
+  if (balance < 1) return { ok: false, balance };
 
-  const newBalance = current - 1;
-  await supabase
+  // Optimistic lock: WHERE balance = current prevents double-spend under concurrency.
+  // If two requests race, only one will match the extra eq condition; the other gets 0 rows.
+  const { data: updated } = await supabase
     .from('token_balances')
-    .update({ balance: newBalance, updated_at: new Date().toISOString() })
-    .eq('session_id', sessionId);
+    .update({ balance: balance - 1, updated_at: new Date().toISOString() })
+    .eq('session_id', sessionId)
+    .eq('balance', balance)
+    .select('balance');
 
+  if (!updated || updated.length === 0) {
+    return { ok: false, balance: 0 };
+  }
+
+  const newBalance = updated[0].balance as number;
   publish(EventType.TOKEN_SPENT, { sessionId, amount: 1, newBalance }).catch(
     (err) => console.error('[db] publish TOKEN_SPENT failed:', err)
   );

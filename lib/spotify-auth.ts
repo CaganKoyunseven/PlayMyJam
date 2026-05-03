@@ -41,13 +41,14 @@ export async function getClientCredentialsToken(): Promise<string> {
 
 // ── Authorization Code Flow (venue owner login) ───────────────
 
-export function getSpotifyAuthUrl(): string {
+export function getSpotifyAuthUrl(state: string): string {
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
     response_type: 'code',
     redirect_uri: REDIRECT_URI,
     scope: SCOPES,
     show_dialog: 'true',
+    state,
   });
   return `https://accounts.spotify.com/authorize?${params}`;
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { exchangeCodeForTokens } from '@/lib/spotify-auth';
 import { supabase } from '@/lib/supabase';
 import { DEFAULT_VENUE_ID } from '@/lib/constants';
@@ -6,9 +7,17 @@ import { DEFAULT_VENUE_ID } from '@/lib/constants';
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get('code');
   const error = req.nextUrl.searchParams.get('error');
+  const returnedState = req.nextUrl.searchParams.get('state');
+
+  // Validate OAuth state — prevents CSRF on the callback
+  const cookieStore = await cookies();
+  const savedState = cookieStore.get('spotify_oauth_state')?.value;
+  if (!returnedState || !savedState || returnedState !== savedState) {
+    return NextResponse.redirect(new URL('/admin/dashboard?spotify_error=invalid_state', req.url));
+  }
 
   if (error || !code) {
-    return NextResponse.redirect(new URL(`/queue?spotify_error=${error ?? 'no_code'}`, req.url));
+    return NextResponse.redirect(new URL('/admin/dashboard?spotify_error=auth_failed', req.url));
   }
 
   try {
@@ -24,9 +33,9 @@ export async function GET(req: NextRequest) {
       })
       .eq('id', DEFAULT_VENUE_ID);
 
-    return NextResponse.redirect(new URL('/queue?spotify_connected=1', req.url));
+    return NextResponse.redirect(new URL('/admin/dashboard?spotify_connected=1', req.url));
   } catch (e) {
     console.error('Spotify callback error:', e);
-    return NextResponse.redirect(new URL('/queue?spotify_error=callback_failed', req.url));
+    return NextResponse.redirect(new URL('/admin/dashboard?spotify_error=callback_failed', req.url));
   }
 }

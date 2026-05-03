@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getVenueToken } from '@/lib/spotify-auth';
+import { isAdminAuthed } from '@/lib/admin-auth';
 
 export async function GET() {
+  if (!(await isAdminAuthed())) {
+    return NextResponse.json({ token: null, error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const token = await getVenueToken();
     if (!token) {

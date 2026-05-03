@@ -32,17 +32,14 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ login }),
+        body: JSON.stringify({ login, password }),
       });
       const data = await res.json();
       if (!res.ok) {
         setPwError(data.error ?? 'Login failed');
         return;
       }
-      const { error } = await supabase.auth.signInWithPassword({
-        email: data.email,
-        password,
-      });
+      const { error } = await supabase.auth.setSession(data.session);
       if (error) {
         setPwError(error.message);
         return;
