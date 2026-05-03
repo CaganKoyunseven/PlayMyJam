@@ -1,28 +1,18 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { createHmac } from 'crypto';
 
-// Web Crypto API — same HMAC-SHA256 as lib/admin-auth.ts but works in Edge runtime
-async function verifyAdminCookie(request: NextRequest): Promise<boolean> {
-  const token = request.cookies.get('pmj_admin')?.value;
-  if (!token) return false;
-  const username = process.env.ADMIN_USERNAME ?? '';
-  const password = process.env.ADMIN_PASSWORD ?? '';
-  if (!username || !password) return false;
-
-  const enc = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    'raw', enc.encode(password), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
-  );
-  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(`pmj:${username}`));
-  const expected = Array.from(new Uint8Array(sig))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-  return token === expected;
+// Standalone Next.js (Docker) runs middleware in Node.js — crypto module is available
+function buildAdminToken(username: string, password: string): string {
+  return createHmac('sha256', password).update(`pmj:${username}`).digest('hex');
 }
 
-export async function proxy(request: NextRequest) {
+export function proxy(request: NextRequest) {
   if (request.nextUrl.pathname.startsWith('/admin/dashboard')) {
-    if (!(await verifyAdminCookie(request))) {
+    const token = request.cookies.get('pmj_admin')?.value;
+    const username = process.env.ADMIN_USERNAME ?? '';
+    const password = process.env.ADMIN_PASSWORD ?? '';
+    if (!username || !password || !token || token !== buildAdminToken(username, password)) {
       return NextResponse.redirect(new URL('/admin', request.url));
     }
   }
