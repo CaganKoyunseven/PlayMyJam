@@ -12,19 +12,7 @@ export function proxy(request: NextRequest) {
     const token = request.cookies.get('pmj_admin')?.value;
     const username = process.env.ADMIN_USERNAME ?? '';
     const password = process.env.ADMIN_PASSWORD ?? '';
-    const expected = (username && password) ? buildAdminToken(username, password) : '';
-    console.error('[proxy] auth check', {
-      hasUsername: !!username,
-      usernameLen: username.length,
-      hasPassword: !!password,
-      passwordLen: password.length,
-      hasCookie: !!token,
-      cookieLen: token?.length ?? 0,
-      expectedPrefix: expected.slice(0, 8),
-      cookiePrefix: token?.slice(0, 8) ?? '',
-      match: !!token && token === expected,
-    });
-    if (!username || !password || !token || token !== expected) {
+    if (!username || !password || !token || token !== buildAdminToken(username, password)) {
       return NextResponse.redirect(new URL('/admin', request.url));
     }
   }
