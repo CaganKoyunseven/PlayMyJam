@@ -1,0 +1,12 @@
+.git
+.github
+.claude
+node_modules
+.next
+.env*
+certificates
+stitch_live_song_queue.zip
+stitch_preview
+docs
+skills-lock.json
+*.log
