@@ -24,7 +24,7 @@ export default function LoginPage() {
   const [magicSent, setMagicSent] = useState(false);
   const [magicError, setMagicError] = useState('');
 
-  async function handlePasswordLogin(e: React.FormEvent) {
+  async function handlePasswordLogin(e: React.SyntheticEvent) {
     e.preventDefault();
     setPwError('');
     setPwLoading(true);
@@ -55,7 +55,7 @@ export default function LoginPage() {
     }
   }
 
-  async function handleMagicLink(e: React.FormEvent) {
+  async function handleMagicLink(e: React.SyntheticEvent) {
     e.preventDefault();
     setMagicError('');
     setMagicLoading(true);
@@ -120,6 +120,20 @@ export default function LoginPage() {
             {t === 'password' ? 'Password' : 'Magic Link'}
           </button>
         ))}
+      </div>
+
+      <div className="px-6 pt-5 pb-1 flex flex-col items-center gap-3">
+        <div className="flex items-center gap-3 w-full">
+          <div className="flex-1 h-px bg-white/10" />
+          <span className="text-xs text-white/30 font-medium">or</span>
+          <div className="flex-1 h-px bg-white/10" />
+        </div>
+        <Link
+          href="/browse"
+          className="text-sm text-white/40 hover:text-white/70 transition-colors font-medium"
+        >
+          Continue as guest
+        </Link>
       </div>
 
       {tab === 'password' ? (

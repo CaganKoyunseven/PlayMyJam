@@ -263,11 +263,12 @@ c4bb713  feat: admin panel Spotify tab (connect + playlist import)
 - [x] QR code generation — admin "QR" tab shows scannable QR linking to `/queue`
 - [x] Zero-token guard with top-up prompt on browse (already implemented — toast + early return)
 - [x] Admin dashboard double-protected (proxy.ts matcher + server component layout.tsx)
-- [ ] Multi-venue support (DEFAULT_VENUE_ID is hardcoded for now)
+- [x] Multi-venue: `DEFAULT_VENUE_ID` now reads from `NEXT_PUBLIC_VENUE_ID` env var (fallback: demo venue `00000000-0000-0000-0000-000000000001`). To add a new venue: insert row in `venues` table → set env var → done. No code changes needed.
 - [x] `/venue` standalone page redirect → `/admin/dashboard`
-- [ ] **[BLOCKED]** Spotify OAuth requires HTTPS redirect URI. `http://localhost` rejected by Spotify Dashboard. `https://localhost` rejected by Spotify as "Insecure". mkcert generates valid cert but Chrome doesn't load it reliably in dev. **Fix: deploy to production (Vercel) and use real HTTPS domain.**
-- [ ] Run `supabase/users.sql` in Supabase dashboard to create profiles table + trigger
-- [ ] Enable Email+Password and Magic Link providers in Supabase Auth settings
+- [x] Docker deployment: `Dockerfile` (multi-stage, standalone output, ~150MB image) + `.dockerignore` added. Set `NEXT_PUBLIC_VENUE_ID` in deployment env vars to select venue.
+- [ ] **[BLOCKED]** Spotify OAuth requires HTTPS redirect URI. `http://localhost` rejected by Spotify Dashboard. `https://localhost` rejected by Spotify as "Insecure". mkcert generates valid cert but Chrome doesn't load it reliably in dev. **Fix: deploy to production and use real HTTPS domain. Update `SPOTIFY_REDIRECT_URI` env var after deploy.**
+- [x] Run modified ALTER TABLE SQL in Supabase dashboard (add `email` column + trigger — profiles table already existed)
+- [x] Enable Email+Password and Magic Link providers in Supabase Auth settings
 
 ---
 
