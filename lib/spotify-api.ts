@@ -29,8 +29,8 @@ async function spotifyFetch(path: string, useVenueToken = false, options: Reques
 
 export async function checkSpotifyConnection(): Promise<{ connected: boolean; error?: string }> {
   try {
-    await getClientCredentialsToken();
-    return { connected: true };
+    const { data } = await supabase.from('venues').select('spotify_access_token').eq('id', DEFAULT_VENUE_ID).single();
+    return { connected: !!data?.spotify_access_token };
   } catch (e) {
     return { connected: false, error: (e as Error).message };
   }
