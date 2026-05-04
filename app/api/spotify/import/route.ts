@@ -18,6 +18,8 @@ export async function POST(req: NextRequest) {
     const result = await importPlaylist(playlistId);
     return NextResponse.json(result);
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    const msg = (e as Error).message;
+    console.error('[spotify/import] error:', msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
