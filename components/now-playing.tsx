@@ -29,7 +29,7 @@ export default function NowPlaying({ playlistUri, onTrackChange }: Props) {
     initSpotifyPlayer(
       getToken,
       newState => {
-        setState(prev => ({ ...newState, deviceId: deviceIdRef.current }));
+        setState({ ...newState, deviceId: deviceIdRef.current });
         onTrackChange?.(newState.trackName, newState.artistName);
       },
       deviceId => {
@@ -53,7 +53,7 @@ export default function NowPlaying({ playlistUri, onTrackChange }: Props) {
       disconnectPlayer();
       if (progressRef.current) clearInterval(progressRef.current);
     };
-  }, []);
+  }, [onTrackChange, playlistUri]);
 
   // Tick progress locally between state updates
   useEffect(() => {

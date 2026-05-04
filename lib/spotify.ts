@@ -11,6 +11,7 @@ export type SpotifyTrack = {
   genre: string;
 };
 
+/*
 async function getAccessToken(): Promise<string> {
   // TODO: implement client credentials flow
   // const res = await fetch('https://accounts.spotify.com/api/token', {
@@ -25,7 +26,9 @@ async function getAccessToken(): Promise<string> {
   // return data.access_token;
   throw new Error('Spotify credentials not configured');
 }
+*/
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function getPlaylistTracks(_playlistId: string | null): Promise<SpotifyTrack[]> {
   // TODO: wire up when credentials are ready
   // const token = await getAccessToken();
