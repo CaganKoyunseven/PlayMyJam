@@ -96,21 +96,22 @@ export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playl
       albumArt: i.track.album?.images?.[0]?.url ?? null,
       durationMs: i.track.duration_ms ?? 0,
     }));
+  if (tracks.length === 0) {
+    return { playlistId: '', imported: 0 };
+  }
 
   // Upsert songs
-  if (tracks.length > 0) {
-    await supabase.from('songs').upsert(
-      tracks.map(t => ({
-        spotify_track_id: t.spotifyTrackId,
-        title: t.title,
-        artist: t.artist,
-        album: t.album,
-        album_art: t.albumArt,
-        duration_ms: t.durationMs,
-      })),
-      { onConflict: 'spotify_track_id' }
-    );
-  }
+  await supabase.from('songs').upsert(
+    tracks.map(t => ({
+      spotify_track_id: t.spotifyTrackId,
+      title: t.title,
+      artist: t.artist,
+      album: t.album,
+      album_art: t.albumArt,
+      duration_ms: t.durationMs,
+    })),
+    { onConflict: 'spotify_track_id' }
+  );
 
   // Fetch song IDs
   const { data: songRows } = await supabase
@@ -124,7 +125,7 @@ export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playl
   const songMap = Object.fromEntries((songRows ?? []).map(s => [s.spotify_track_id, s.id]));
 
   // Upsert playlist record
-  const { data: playlist } = await supabase
+  const { data: playlist, error: playlistError } = await supabase
     .from('playlists')
     .upsert(
       {
@@ -139,20 +140,24 @@ export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playl
     .select('id')
     .single();
 
-  const playlistId = playlist!.id;
+  if (!playlist?.id) {
+    console.error('[importPlaylist] playlist upsert failed:', playlistError);
+    throw new Error('Failed to save playlist record');
+  }
+
+  const playlistId = playlist.id;
 
   // Upsert playlist_songs
-  if (songRows && songRows.length > 0) {
-    await supabase.from('playlist_songs').upsert(
-      tracks
-        .filter(t => songMap[t.spotifyTrackId])
-        .map((t, i) => ({
-          playlist_id: playlistId,
-          song_id: songMap[t.spotifyTrackId],
-          position: i,
-        })),
-      { onConflict: 'playlist_id,song_id' }
-    );
+  const playlistSongs = tracks
+    .filter(t => songMap[t.spotifyTrackId])
+    .map((t, i) => ({
+      playlist_id: playlistId,
+      song_id: songMap[t.spotifyTrackId],
+      position: i,
+    }));
+
+  if (playlistSongs.length > 0) {
+    await supabase.from('playlist_songs').upsert(playlistSongs, { onConflict: 'playlist_id,song_id' });
   }
 
   return { playlistId, imported: tracks.length };
