@@ -114,17 +114,19 @@ export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playl
   }
 
   // Extract valid music tracks (filter out podcasts, null entries, local files)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tracks: SpotifyTrackItem[] = rawItems
     .filter((i: any) => i?.track?.id && i?.track?.name) // eslint-disable-line @typescript-eslint/no-explicit-any
-    .map((i: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
-      spotifyTrackId: i.track.id,
-      title: i.track.name,
-      artist: i.track.artists?.map((a: { name: string }) => a.name).join(', ') ?? 'Unknown',
-      album: i.track.album?.name ?? '',
-      albumArt: i.track.album?.images?.[0]?.url ?? null,
-      durationMs: i.track.duration_ms ?? 0,
-    }));
+    .map(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (i: any) => ({
+        spotifyTrackId: i.track.id,
+        title: i.track.name,
+        artist: i.track.artists?.map((a: { name: string }) => a.name).join(', ') ?? 'Unknown',
+        album: i.track.album?.name ?? '',
+        albumArt: i.track.album?.images?.[0]?.url ?? null,
+        durationMs: i.track.duration_ms ?? 0,
+      })
+    );
 
   console.log(`[importPlaylist] extracted ${tracks.length} valid tracks from ${rawItems.length} raw items`);
 
