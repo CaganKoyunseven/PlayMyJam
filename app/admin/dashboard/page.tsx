@@ -21,7 +21,7 @@ import {
   PlaylistRow,
 } from '@/lib/db';
 import { initObservers, teardownObservers } from '@/lib/observers';
-import { getVenuePlaylists, importPlaylist, checkSpotifyConnection, SpotifyPlaylist } from '@/lib/spotify-api';
+import { getVenuePlaylists, checkSpotifyConnection, SpotifyPlaylist } from '@/lib/spotify-api';
 import { getVenueToken } from '@/lib/spotify-auth';
 import { supabase } from '@/lib/supabase';
 
@@ -118,8 +118,14 @@ export default function AdminDashboard() {
     setImporting(pl.id);
     setSpotifyError(null);
     try {
-      const { imported } = await importPlaylist(pl.id);
-      setSpotifyToast(`Imported "${pl.name}" — ${imported} songs`);
+      const res = await fetch('/api/spotify/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playlistId: pl.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Import failed');
+      setSpotifyToast(`Imported "${pl.name}" — ${data.imported} songs`);
       setTimeout(() => setSpotifyToast(null), 3000);
       setImportedPlaylists(await getVenueImportedPlaylists());
     } catch (e) {
