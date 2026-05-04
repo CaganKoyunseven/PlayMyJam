@@ -18,8 +18,15 @@ async function spotifyFetch(path: string, useVenueToken = false, options: Reques
 
   if (res.status === 204) return null;
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `Spotify API error ${res.status}`);
+    const errBody = await res.text().catch(() => '');
+    let errMsg: string;
+    try {
+      const parsed = JSON.parse(errBody);
+      errMsg = parsed?.error?.message || `Spotify API error ${res.status}`;
+    } catch {
+      errMsg = `Spotify API error ${res.status}`;
+    }
+    throw new Error(`${errMsg} (HTTP ${res.status}) — body: ${errBody.slice(0, 300)}`);
   }
 
   return res.json();

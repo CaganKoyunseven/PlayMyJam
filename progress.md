@@ -71,6 +71,7 @@ app/
     spotify/token/          — Serve venue access token to Playback SDK
     spotify/search/         — Server-side Spotify search proxy (client can't use server env vars)
     spotify/import/         — Server-side playlist import proxy (client can't use SPOTIFY_CLIENT_SECRET)
+    spotify/disconnect/     — Clear venue Spotify tokens (force fresh OAuth re-auth)
     admin/login/            — POST: validate ADMIN_USERNAME + ADMIN_PASSWORD, set httpOnly cookie
     admin/logout/           — POST: clear admin session cookie
     auth/login/             — POST: resolve username → email (for signInWithPassword)
@@ -223,7 +224,7 @@ Without these, `spotify_access_token` stays NULL after OAuth (PostgREST ignores 
 
 ### Known Spotify Issues / Debugging
 
-**Import returns 403 "Forbidden" from Spotify** (status as of 2026-05-04, branch `fix/spotify-import`)
+**Import returns 403 "Forbidden" from Spotify** (status as of 2026-05-04)
 
 **Root cause hypothesis:** The OAuth token stored in the DB may lack `playlist-read-private` scope
 if the venue owner connected Spotify before that scope was included in the auth URL. Another
@@ -235,10 +236,14 @@ possibility: Spotify app is in Development Mode and the playlist owner is not in
 3. Added `console.error('[spotify/import] error:', msg)` in catch block → see Railway logs for exact Spotify error
 4. Server-side import still returns 403 "Forbidden" from Spotify API
 
-**Next steps to try:**
-- Check Railway logs for exact Spotify error message from `[spotify/import] error:` line
-- If scope issue: disconnect Spotify from admin panel and reconnect → fresh token with all scopes
-- If Dev Mode restriction: add venue Spotify account to Spotify Developer Dashboard → User Management
+**Fix applied (2026-05-04):**
+- Created `/api/spotify/disconnect` route — clears venue tokens from DB
+- Added "Disconnect" + "Reconnect with fresh permissions" buttons to admin Spotify tab
+- Enhanced `spotifyFetch()` error handling — now logs full HTTP status + response body
+- Import route now returns `hint` field with actionable advice on 403 errors
+
+**To resolve:** Admin should click "Disconnect" → then "Connect Spotify Account" → fresh OAuth with all scopes (`playlist-read-private`, `playlist-read-collaborative`) → re-import playlists.
+If still 403 after reconnect: Spotify app is in Development Mode — add venue Spotify account to Spotify Developer Dashboard → User Management → Allowlist.
 
 ---
 
@@ -302,7 +307,7 @@ c4bb713  feat: admin panel Spotify tab (connect + playlist import)
 - [x] `checkSpotifyConnection()` reads Supabase DB directly (not Client Credentials token) — client-side can't use server env vars
 - [x] Supabase RLS policies on `venues` table — anon key needs explicit policies, raw `GRANT` is ignored by PostgREST
 - [x] `/api/spotify/import` server route — browser can't use `SPOTIFY_CLIENT_SECRET` for token refresh; import now proxied through server
-- [ ] **[IN PROGRESS]** Playlist import returns Spotify 403 "Forbidden" — likely scope mismatch on stored OAuth token. See "Known Spotify Issues" section above.
+- [x] **[FIXED]** Playlist import returns Spotify 403 "Forbidden" — scope mismatch on stored OAuth token. Fix: added disconnect/reconnect flow to admin panel. See "Known Spotify Issues" section above.
 
 ---
 

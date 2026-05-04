@@ -52,6 +52,7 @@ export default function AdminDashboard() {
   const [loadingPlaylists, setLoadingPlaylists] = useState(false);
   const [spotifyError, setSpotifyError] = useState<string | null>(null);
   const [spotifyToast, setSpotifyToast] = useState<string | null>(null);
+  const [disconnecting, setDisconnecting] = useState(false);
 
   // ── Queue loaders ──────────────────────────────────────────
   const load = useCallback(async () => {
@@ -114,6 +115,25 @@ export default function AdminDashboard() {
     };
   }, [load, loadQueue, loadSpotifySetup]);
 
+  async function handleDisconnect() {
+    setDisconnecting(true);
+    setSpotifyError(null);
+    try {
+      const res = await fetch('/api/spotify/disconnect', { method: 'POST' });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? 'Disconnect failed');
+      }
+      setSpotifyConnected(false);
+      setSpotifyPlaylists([]);
+      setSpotifyToast('Spotify disconnected — click "Connect" to re-authorize with fresh permissions.');
+      setTimeout(() => setSpotifyToast(null), 5000);
+    } catch (e) {
+      setSpotifyError((e as Error).message);
+    }
+    setDisconnecting(false);
+  }
+
   async function handleImport(pl: SpotifyPlaylist) {
     setImporting(pl.id);
     setSpotifyError(null);
@@ -124,7 +144,10 @@ export default function AdminDashboard() {
         body: JSON.stringify({ playlistId: pl.id }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Import failed');
+      if (!res.ok) {
+        const errorMsg = data.hint ? `${data.error}\n💡 ${data.hint}` : data.error ?? 'Import failed';
+        throw new Error(errorMsg);
+      }
       setSpotifyToast(`Imported "${pl.name}" — ${data.imported} songs`);
       setTimeout(() => setSpotifyToast(null), 3000);
       setImportedPlaylists(await getVenueImportedPlaylists());
@@ -425,7 +448,7 @@ export default function AdminDashboard() {
                 <div className={`size-2.5 rounded-full ${spotifyConnected === null ? 'bg-yellow-400' : spotifyConnected ? 'bg-green-400' : 'bg-red-400'}`} />
               </div>
 
-              {spotifyPlaylists.length === 0 ? (
+              {!spotifyConnected ? (
                 <a
                   href="/api/spotify/connect"
                   className="flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-bold text-white transition-all active:scale-95"
@@ -435,14 +458,33 @@ export default function AdminDashboard() {
                   Connect Spotify Account
                 </a>
               ) : (
-                <button
-                  onClick={fetchSpotifyPlaylists}
-                  disabled={loadingPlaylists}
-                  className="flex h-11 items-center justify-center gap-2 rounded-xl border border-[#1DB954]/40 text-sm font-bold text-white transition-all hover:bg-[#1DB954]/10 disabled:opacity-50"
-                >
-                  <span className={`material-symbols-outlined text-[18px] text-[#1DB954] ${loadingPlaylists ? 'animate-spin' : ''}`}>refresh</span>
-                  Refresh Playlists
-                </button>
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={fetchSpotifyPlaylists}
+                      disabled={loadingPlaylists}
+                      className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-[#1DB954]/40 text-sm font-bold text-white transition-all hover:bg-[#1DB954]/10 disabled:opacity-50"
+                    >
+                      <span className={`material-symbols-outlined text-[18px] text-[#1DB954] ${loadingPlaylists ? 'animate-spin' : ''}`}>refresh</span>
+                      Refresh
+                    </button>
+                    <button
+                      onClick={handleDisconnect}
+                      disabled={disconnecting}
+                      className="flex h-11 items-center justify-center gap-2 rounded-xl border border-red-500/30 px-4 text-sm font-bold text-red-400 transition-all hover:bg-red-500/10 disabled:opacity-50"
+                    >
+                      <span className={`material-symbols-outlined text-[18px] ${disconnecting ? 'animate-spin' : ''}`}>{disconnecting ? 'refresh' : 'link_off'}</span>
+                      Disconnect
+                    </button>
+                  </div>
+                  <a
+                    href="/api/spotify/connect"
+                    className="flex h-9 items-center justify-center gap-2 rounded-xl border border-[#1DB954]/20 text-xs font-medium text-[#1DB954]/70 transition-all hover:bg-[#1DB954]/10"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">sync</span>
+                    Reconnect with fresh permissions
+                  </a>
+                </div>
               )}
 
               {spotifyError && <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-400">{spotifyError}</div>}
