@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Buy Tokens &amp; Premium - PlayMyJam</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f20da6",
+                        "background-light": "#f8f5f7",
+                        "background-dark": "#181116",
+                        "surface-dark": "#271b23",
+                        "border-dark": "#543b4c",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "1rem", "lg": "1.5rem", "xl": "2rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display bg-background-light dark:bg-background-dark text-slate-900 dark:text-white min-h-screen flex flex-col antialiased">
+<!-- Top App Bar -->
+<div class="sticky top-0 z-50 flex items-center bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md p-4 pb-2 justify-between border-b border-slate-200 dark:border-border-dark">
+<button class="text-slate-900 dark:text-white flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pr-10">Store</h2>
+</div>
+<!-- Main Content -->
+<div class="flex-1 overflow-y-auto p-4 space-y-6">
+<!-- Premium Banner -->
+<div class="relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 shadow-lg group">
+<div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1493225255756-d9584f8606e9?q=80&amp;w=2070&amp;auto=format&amp;fit=crop')] bg-cover bg-center opacity-30 mix-blend-overlay" data-alt="Abstract music waves background"></div>
+<div class="relative flex flex-col p-6 items-start gap-4">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-yellow-300 filled icon-filled" style="font-variation-settings: 'FILL' 1;">star</span>
+<p class="text-white text-xs font-bold uppercase tracking-wider">PlayMyJam Premium</p>
+</div>
+<h2 class="text-white text-2xl font-extrabold leading-tight">Unlock Unlimited Vibes</h2>
+<p class="text-blue-100 text-sm font-medium leading-relaxed max-w-[280px]">Skip the queue, get unlimited requests, and enjoy ad-free jamming at any venue.</p>
+</div>
+<button class="w-full sm:w-auto bg-white text-blue-700 hover:bg-blue-50 active:bg-blue-100 font-bold py-3 px-6 rounded-full shadow-sm transition-all transform active:scale-95 flex items-center justify-center gap-2">
+<span>Subscribe Now</span>
+<span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Token Packages Section -->
+<div>
+<h2 class="text-slate-900 dark:text-white text-xl font-bold leading-tight mb-4">Buy Tokens</h2>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+<!-- Package 1: Starter -->
+<div class="relative group flex flex-col gap-4 rounded-xl border border-slate-200 dark:border-border-dark bg-white dark:bg-surface-dark p-5 hover:border-primary/50 transition-colors shadow-sm">
+<div class="flex justify-between items-start">
+<div class="flex flex-col">
+<h3 class="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wider">Starter Jam</h3>
+<div class="flex items-baseline gap-1 mt-1">
+<span class="text-slate-900 dark:text-white text-3xl font-black tracking-tight">$1.99</span>
+<span class="text-slate-500 dark:text-slate-400 text-sm font-bold">/ 5 tokens</span>
+</div>
+</div>
+<div class="size-10 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">music_note</span>
+</div>
+</div>
+<div class="space-y-2 py-2">
+<div class="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
+<span class="material-symbols-outlined text-green-500 text-[20px]">check_circle</span>
+<span>5 Song Requests</span>
+</div>
+<div class="flex items-center gap-3 text-sm text-slate-400 dark:text-slate-500 line-through decoration-slate-400/50">
+<span class="material-symbols-outlined text-slate-300 dark:text-slate-600 text-[20px]">cancel</span>
+<span>Priority Queue</span>
+</div>
+</div>
+<button class="mt-auto w-full py-3 bg-slate-900 dark:bg-white/10 hover:dark:bg-white/20 text-white font-bold rounded-lg transition-colors">
+                        Buy
+                    </button>
+</div>
+<!-- Package 2: Best Value -->
+<div class="relative flex flex-col gap-4 rounded-xl border-2 border-primary bg-white dark:bg-surface-dark p-5 shadow-[0_0_15px_rgba(242,13,166,0.15)] transform scale-[1.02] md:scale-100 md:hover:scale-[1.02] transition-transform z-10">
+<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-sm">
+                        Most Popular
+                    </div>
+<div class="flex justify-between items-start pt-2">
+<div class="flex flex-col">
+<h3 class="text-primary text-sm font-bold uppercase tracking-wider">Party Pack</h3>
+<div class="flex items-baseline gap-1 mt-1">
+<span class="text-slate-900 dark:text-white text-4xl font-black tracking-tight">$6.99</span>
+<span class="text-slate-500 dark:text-slate-400 text-sm font-bold">/ 20 tokens</span>
+</div>
+</div>
+<div class="size-10 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined filled" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
+</div>
+</div>
+<div class="space-y-2 py-2">
+<div class="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
+<span class="material-symbols-outlined text-primary text-[20px]">check_circle</span>
+<span class="font-medium text-slate-900 dark:text-white">20 Song Requests</span>
+</div>
+<div class="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
+<span class="material-symbols-outlined text-primary text-[20px]">check_circle</span>
+<span>1 Free Skip</span>
+</div>
+<div class="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
+<span class="material-symbols-outlined text-primary text-[20px]">check_circle</span>
+<span>No Ads for 24h</span>
+</div>
+</div>
+<button class="mt-auto w-full py-3 bg-primary hover:bg-primary/90 text-white font-bold rounded-lg shadow-lg shadow-primary/25 transition-all active:scale-95">
+                        Buy Now
+                    </button>
+</div>
+<!-- Package 3: Venue King -->
+<div class="relative group flex flex-col gap-4 rounded-xl border border-slate-200 dark:border-border-dark bg-white dark:bg-surface-dark p-5 hover:border-primary/50 transition-colors shadow-sm">
+<div class="flex justify-between items-start">
+<div class="flex flex-col">
+<h3 class="text-purple-500 dark:text-purple-400 text-sm font-bold uppercase tracking-wider">Venue King</h3>
+<div class="flex items-baseline gap-1 mt-1">
+<span class="text-slate-900 dark:text-white text-3xl font-black tracking-tight">$14.99</span>
+<span class="text-slate-500 dark:text-slate-400 text-sm font-bold">/ 50 tokens</span>
+</div>
+</div>
+<div class="size-10 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-500">
+<span class="material-symbols-outlined">diamond</span>
+</div>
+</div>
+<div class="space-y-2 py-2">
+<div class="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
+<span class="material-symbols-outlined text-green-500 text-[20px]">check_circle</span>
+<span>50 Song Requests</span>
+</div>
+<div class="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
+<span class="material-symbols-outlined text-green-500 text-[20px]">check_circle</span>
+<span>3 Free Skips</span>
+</div>
+<div class="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
+<span class="material-symbols-outlined text-green-500 text-[20px]">check_circle</span>
+<span>VIP Status Badge</span>
+</div>
+</div>
+<button class="mt-auto w-full py-3 bg-slate-900 dark:bg-white/10 hover:dark:bg-white/20 text-white font-bold rounded-lg transition-colors">
+                        Buy
+                    </button>
+</div>
+</div>
+</div>
+<!-- Payment Methods -->
+<div class="pt-4 pb-12">
+<h3 class="text-slate-900 dark:text-white text-base font-bold leading-tight mb-3 px-1">Payment Methods</h3>
+<div class="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-hide">
+<div class="h-12 w-20 flex-shrink-0 bg-white dark:bg-surface-dark border border-slate-200 dark:border-border-dark rounded-lg flex items-center justify-center shadow-sm">
+<img alt="Mastercard" class="h-6 w-auto object-contain" data-alt="Mastercard logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDYft8dmubkZbHlEpwJEbQqDdzdFpslqBpFUtGypuxTl2_NuKlKzD7DBEB5-CODtfQQC02_MsOVc2adeKvevkgpfP_8psCFhAv2wj_Lz2mrEK6ms3TqcsZTJqMOg9CCBCBtUDMliCAd4UmpAiMuYzDl2n1-IAGw7rDAXexR3b05xmETj6A1OPBneioWhyLXnm8006wtQUJGF2DcJ_h2yQnOruuGBPSNKlaW65DLl8lBRIUsyELUqupgbjUjBXNWkgXN4HnkbLN5v1Q"/>
+</div>
+<div class="h-12 w-20 flex-shrink-0 bg-white dark:bg-surface-dark border border-slate-200 dark:border-border-dark rounded-lg flex items-center justify-center shadow-sm">
+<img alt="Visa" class="h-4 w-auto object-contain" data-alt="Visa logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDvDHC7H8uH6tRhsfQqjisQvsTPCxC1won8sHLkhJegRDzqNM-qukho9VlrQnoyO_HVGNrQo0gAY2ch3ZzD_6glgnbXF9Jzs-vUsinuyjEluKNhPVPgY9DDinzvBEg3Vg8t-zKnYPDtGY8NMhP_pvph7f2RzrGFInGNnWRJ22kORzvQNTyGwbNS_9a43c9Xiu28SdSLEty0DSRflft5Oh43n4IqseEGMEWdBlINtvdQMXyYMKfn6Cl-CFw_f_1D1DSMj3eJlmhEU_0"/>
+</div>
+<div class="h-12 w-20 flex-shrink-0 bg-white dark:bg-surface-dark border border-slate-200 dark:border-border-dark rounded-lg flex items-center justify-center shadow-sm">
+<span class="text-xs font-bold text-slate-700 dark:text-white flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]">account_balance_wallet</span>
+<span>Pay</span>
+</span>
+</div>
+<button class="h-12 w-12 flex-shrink-0 bg-slate-100 dark:bg-white/5 border border-transparent dark:border-border-dark hover:bg-slate-200 dark:hover:bg-white/10 rounded-lg flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-slate-500 dark:text-slate-400">add</span>
+</button>
+</div>
+<p class="text-xs text-slate-400 dark:text-slate-500 mt-4 text-center">Transactions are secured and encrypted.</p>
+</div>
+</div>
+</body></html>

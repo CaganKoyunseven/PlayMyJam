@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+
 import { getQueueEntries, insertQueueEntry, QueueEntry } from './db';
 
 type AddToQueueInput = {
@@ -24,7 +25,7 @@ export function QueueProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getQueueEntries().then((entries) => {
+    getQueueEntries().then(entries => {
       setQueue(entries);
       setLoading(false);
     });
@@ -40,19 +41,15 @@ export function QueueProvider({ children }: { children: ReactNode }) {
       tokens: 1,
     };
 
-    setQueue((prev) => [optimistic, ...prev.filter((s) => s.id !== entry.spotifyTrackId)]);
+    setQueue(prev => [optimistic, ...prev.filter(s => s.id !== entry.spotifyTrackId)]);
     await insertQueueEntry(entry);
   }
 
   function isInQueue(spotifyTrackId: string) {
-    return queue.some((s) => s.id === spotifyTrackId);
+    return queue.some(s => s.id === spotifyTrackId);
   }
 
-  return (
-    <QueueContext.Provider value={{ queue, loading, addToQueue, isInQueue }}>
-      {children}
-    </QueueContext.Provider>
-  );
+  return <QueueContext.Provider value={{ queue, loading, addToQueue, isInQueue }}>{children}</QueueContext.Provider>;
 }
 
 export function useQueue() {

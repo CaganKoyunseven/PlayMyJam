@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { supabase } from '@/lib/supabase';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -22,11 +23,7 @@ export async function POST(req: NextRequest) {
   let email = login;
   if (!EMAIL_RE.test(login)) {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('email')
-        .eq('username', login)
-        .maybeSingle();
+      const { data, error } = await supabase.from('profiles').select('email').eq('username', login).maybeSingle();
       if (error || !data?.email) {
         return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
       }

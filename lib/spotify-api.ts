@@ -1,11 +1,9 @@
+import { DEFAULT_VENUE_ID } from './constants';
 import { getClientCredentialsToken, getVenueToken } from './spotify-auth';
 import { supabase } from './supabase';
-import { DEFAULT_VENUE_ID } from './constants';
 
 async function spotifyFetch(path: string, useVenueToken = false, options: RequestInit = {}) {
-  const token = useVenueToken
-    ? await getVenueToken()
-    : await getClientCredentialsToken();
+  const token = useVenueToken ? await getVenueToken() : await getClientCredentialsToken();
 
   if (!token) throw new Error('No Spotify token available');
 
@@ -47,9 +45,11 @@ export type SpotifyPlaylist = {
   trackCount: number;
 };
 
+type RawPlaylist = { id: string; name: string; images: { url: string }[]; tracks: { total: number } };
+
 export async function getVenuePlaylists(): Promise<SpotifyPlaylist[]> {
   const data = await spotifyFetch('/me/playlists?limit=50', true);
-  return (data?.items ?? []).map((p: any) => ({
+  return (data?.items ?? []).map((p: RawPlaylist) => ({
     id: p.id,
     name: p.name,
     imageUrl: p.images?.[0]?.url ?? null,
@@ -74,12 +74,15 @@ export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playl
     spotifyFetch(`/playlists/${spotifyPlaylistId}/tracks?limit=50&fields=items(track(id,name,artists,album,duration_ms))`, true),
   ]);
 
+  type RawTrackItem = {
+    track: { id: string; name: string; artists: { name: string }[]; album: { name: string; images: { url: string }[] }; duration_ms: number };
+  };
   const tracks: SpotifyTrackItem[] = (tracksData?.items ?? [])
-    .filter((i: any) => i?.track?.id)
-    .map((i: any) => ({
+    .filter((i: RawTrackItem) => i?.track?.id)
+    .map((i: RawTrackItem) => ({
       spotifyTrackId: i.track.id,
       title: i.track.name,
-      artist: i.track.artists.map((a: any) => a.name).join(', '),
+      artist: i.track.artists.map(a => a.name).join(', '),
       album: i.track.album?.name ?? '',
       albumArt: i.track.album?.images?.[0]?.url ?? null,
       durationMs: i.track.duration_ms ?? 0,
@@ -88,7 +91,7 @@ export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playl
   // Upsert songs
   if (tracks.length > 0) {
     await supabase.from('songs').upsert(
-      tracks.map((t) => ({
+      tracks.map(t => ({
         spotify_track_id: t.spotifyTrackId,
         title: t.title,
         artist: t.artist,
@@ -104,9 +107,12 @@ export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playl
   const { data: songRows } = await supabase
     .from('songs')
     .select('id, spotify_track_id')
-    .in('spotify_track_id', tracks.map((t) => t.spotifyTrackId));
+    .in(
+      'spotify_track_id',
+      tracks.map(t => t.spotifyTrackId)
+    );
 
-  const songMap = Object.fromEntries((songRows ?? []).map((s) => [s.spotify_track_id, s.id]));
+  const songMap = Object.fromEntries((songRows ?? []).map(s => [s.spotify_track_id, s.id]));
 
   // Upsert playlist record
   const { data: playlist } = await supabase
@@ -130,7 +136,7 @@ export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playl
   if (songRows && songRows.length > 0) {
     await supabase.from('playlist_songs').upsert(
       tracks
-        .filter((t) => songMap[t.spotifyTrackId])
+        .filter(t => songMap[t.spotifyTrackId])
         .map((t, i) => ({
           playlist_id: playlistId,
           song_id: songMap[t.spotifyTrackId],

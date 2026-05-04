@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { initSpotifyPlayer, disconnectPlayer, defaultPlaybackState, PlaybackState } from '@/lib/spotify-playback';
-import { pausePlayback, resumePlayback, skipToNext, startPlayback } from '@/lib/spotify-api';
+
 import { advanceQueue } from '@/lib/db';
+import { pausePlayback, resumePlayback, skipToNext, startPlayback } from '@/lib/spotify-api';
+import { initSpotifyPlayer, disconnectPlayer, defaultPlaybackState, PlaybackState } from '@/lib/spotify-playback';
 
 type Props = {
   playlistUri?: string;
@@ -27,23 +28,25 @@ export default function NowPlaying({ playlistUri, onTrackChange }: Props) {
 
     initSpotifyPlayer(
       getToken,
-      (newState) => {
-        setState((prev) => ({ ...newState, deviceId: deviceIdRef.current }));
+      newState => {
+        setState(prev => ({ ...newState, deviceId: deviceIdRef.current }));
         onTrackChange?.(newState.trackName, newState.artistName);
       },
-      (deviceId) => {
+      deviceId => {
         deviceIdRef.current = deviceId;
-        setState((prev) => ({ ...prev, deviceId }));
+        setState(prev => ({ ...prev, deviceId }));
         setLoading(false);
         if (playlistUri) {
           startPlayback(deviceId, playlistUri).catch(() => {});
         }
       },
-      (msg) => {
+      msg => {
         setError(msg);
         setLoading(false);
       },
-      () => { advanceQueue().catch((err) => console.error('[NowPlaying] advanceQueue failed:', err)); }
+      () => {
+        advanceQueue().catch(err => console.error('[NowPlaying] advanceQueue failed:', err));
+      }
     );
 
     return () => {
@@ -57,7 +60,7 @@ export default function NowPlaying({ playlistUri, onTrackChange }: Props) {
     if (progressRef.current) clearInterval(progressRef.current);
     if (state.isPlaying) {
       progressRef.current = setInterval(() => {
-        setState((prev) => ({
+        setState(prev => ({
           ...prev,
           progressMs: Math.min(prev.progressMs + 500, prev.durationMs),
         }));
@@ -100,34 +103,36 @@ export default function NowPlaying({ playlistUri, onTrackChange }: Props) {
   return (
     <div className="flex flex-col items-center gap-4 px-4 py-2">
       {/* Album art */}
-      <div className="relative size-48 rounded-2xl overflow-hidden shadow-2xl">
+      <div className="relative size-48 overflow-hidden rounded-2xl shadow-2xl">
         {state.albumArt ? (
-          <img src={state.albumArt} alt={state.trackName} className="w-full h-full object-cover" />
+          <img
+            src={state.albumArt}
+            alt={state.trackName}
+            className="h-full w-full object-cover"
+          />
         ) : (
-          <div className="w-full h-full bg-surface-dark flex items-center justify-center">
-            <span className="material-symbols-outlined text-white/20 text-5xl">album</span>
+          <div className="bg-surface-dark flex h-full w-full items-center justify-center">
+            <span className="material-symbols-outlined text-5xl text-white/20">album</span>
           </div>
         )}
       </div>
 
       {/* Track info */}
       <div className="text-center">
-        <p className="text-lg font-bold truncate max-w-xs">
-          {state.trackName || 'Not playing'}
-        </p>
+        <p className="max-w-xs truncate text-lg font-bold">{state.trackName || 'Not playing'}</p>
         <p className="text-sm text-slate-400">{state.artistName}</p>
       </div>
 
       {/* Progress bar */}
-      <div className="w-full flex items-center gap-2">
-        <span className="text-xs font-mono text-slate-500 w-10 text-right">{fmt(state.progressMs)}</span>
-        <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
+      <div className="flex w-full items-center gap-2">
+        <span className="w-10 text-right font-mono text-xs text-slate-500">{fmt(state.progressMs)}</span>
+        <div className="h-1 flex-1 overflow-hidden rounded-full bg-white/10">
           <div
             className="h-full rounded-full transition-all duration-500"
             style={{ width: `${progress}%`, background: 'linear-gradient(90deg, #f20da6, #9333ea)' }}
           />
         </div>
-        <span className="text-xs font-mono text-slate-500 w-10">{fmt(state.durationMs)}</span>
+        <span className="w-10 font-mono text-xs text-slate-500">{fmt(state.durationMs)}</span>
       </div>
 
       {/* Controls */}
@@ -137,15 +142,21 @@ export default function NowPlaying({ playlistUri, onTrackChange }: Props) {
           className="flex size-14 items-center justify-center rounded-full text-white transition-all active:scale-95"
           style={{ background: 'linear-gradient(135deg, #f20da6, #9333ea)' }}
         >
-          <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+          <span
+            className="material-symbols-outlined text-3xl"
+            style={{ fontVariationSettings: "'FILL' 1" }}
+          >
             {state.isPlaying ? 'pause' : 'play_arrow'}
           </span>
         </button>
         <button
           onClick={() => skipToNext()}
-          className="flex size-10 items-center justify-center rounded-full text-white/60 hover:text-white transition-colors"
+          className="flex size-10 items-center justify-center rounded-full text-white/60 transition-colors hover:text-white"
         >
-          <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+          <span
+            className="material-symbols-outlined text-2xl"
+            style={{ fontVariationSettings: "'FILL' 1" }}
+          >
             skip_next
           </span>
         </button>

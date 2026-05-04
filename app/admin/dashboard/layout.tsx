@@ -1,5 +1,6 @@
-import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+
 import { buildAdminToken } from '@/lib/admin-auth';
 
 export default async function AdminDashboardLayout({ children }: { children: React.ReactNode }) {

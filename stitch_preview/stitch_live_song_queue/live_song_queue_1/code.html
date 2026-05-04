@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html class="dark" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Canlı Çalma Kuyruğu - PlayMyJam</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f20da6",
+                        "background-light": "#f8f5f7",
+                        "background-dark": "#22101c",
+                        "surface-dark": "#341a2a",
+                        "surface-light": "#ffffff",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem", 
+                        "lg": "1.5rem", 
+                        "xl": "2rem", 
+                        "full": "9999px"
+                    },
+                    boxShadow: {
+                        'neon': '0 0 10px rgba(242, 13, 166, 0.5), 0 0 20px rgba(242, 13, 166, 0.3)',
+                    }
+                },
+            },
+        }
+    </script>
+<style>.no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+        body {
+          min-height: max(884px, 100dvh);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white antialiased selection:bg-primary selection:text-white">
+<div class="relative flex h-full min-h-screen w-full flex-col overflow-x-hidden max-w-md mx-auto shadow-2xl bg-background-light dark:bg-background-dark">
+<header class="sticky top-0 z-50 flex items-center justify-between p-4 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md">
+<button class="flex size-10 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-2xl">arrow_back</span>
+</button>
+<h1 class="text-lg font-bold tracking-tight">The Neon Lounge</h1>
+<button class="flex size-10 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-2xl">settings</span>
+</button>
+</header>
+<main class="flex-1 flex flex-col gap-6 px-4 pb-32">
+<section class="mt-2">
+<div class="flex items-center justify-between mb-4">
+<h2 class="text-2xl font-bold tracking-tight flex items-center gap-2">
+<span class="material-symbols-outlined text-primary animate-pulse">equalizer</span>
+                        Şu An Çalıyor
+                    </h2>
+<span class="text-xs font-semibold px-2 py-1 rounded bg-primary/20 text-primary uppercase tracking-wider">CANLI</span>
+</div>
+<div class="relative group w-full aspect-square max-w-[340px] mx-auto">
+<div class="absolute inset-0 bg-gradient-to-tr from-primary via-purple-600 to-blue-600 rounded-full blur-2xl opacity-40 group-hover:opacity-60 transition-opacity duration-500"></div>
+<div class="relative w-full h-full rounded-full border-4 border-surface-dark dark:border-white/10 bg-black shadow-2xl flex items-center justify-center overflow-hidden">
+<div class="absolute inset-0 rounded-full opacity-20" style="background: repeating-radial-gradient(#111 0, #111 2px, #222 3px, #222 4px);"></div>
+<div class="relative w-[65%] h-[65%] rounded-full overflow-hidden border-8 border-black shadow-lg">
+<img alt="Abstract colorful album cover art" class="w-full h-full object-cover animate-[spin_10s_linear_infinite]" data-alt="Abstract colorful album cover art" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC7od3CFim40_NdvHV8K9kQJuDriOS7t_2iYEzKrd9cbwzSv35JD1N3tgjcJmayBYB40VH5wxhEbCU5B6nMVdrRdKJM29luzN0AVa-sagTYo72PD2-6hLn7dIHgFdZnNnlMc4q8E7TG__bpUlbDQDAdDK913mT-13vvB77I8fafnIyHEjP_Hu2dqu7a4Df66pmjhgI9izROCh4LWm_xT6lOORq0QGbbjkJnQ2o_vdh-DTQYYjUewfRsD2Sd_U9CcGKdDfaoJvU7Yv0"/>
+</div>
+<div class="absolute w-4 h-4 bg-background-light dark:bg-background-dark rounded-full z-10"></div>
+</div>
+</div>
+<div class="text-center mt-6 space-y-1">
+<h3 class="text-2xl font-bold leading-tight">Levitating</h3>
+<p class="text-slate-500 dark:text-slate-400 text-lg">Dua Lipa</p>
+<div class="flex items-center justify-center gap-2 mt-2">
+<div class="h-1 w-full max-w-[120px] bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-2/3"></div>
+</div>
+<span class="text-xs font-mono text-slate-400">2:14 / 3:23</span>
+</div>
+</div>
+</section>
+<section class="mt-4">
+<div class="flex items-center justify-between mb-4 sticky top-[72px] bg-background-light dark:bg-background-dark py-2 z-10">
+<h3 class="text-xl font-bold">Sıradaki 10 Şarkı</h3>
+<span class="text-sm text-slate-500 dark:text-slate-400">Kuyrukta 12 şarkı</span>
+</div>
+<div class="flex flex-col gap-3">
+<div class="group flex items-center gap-3 p-3 rounded-lg bg-surface-light dark:bg-surface-dark border border-transparent hover:border-primary/50 transition-all duration-300 shadow-sm hover:shadow-neon">
+<div class="relative shrink-0 size-14 rounded overflow-hidden">
+<img alt="Neon abstract album cover" class="h-full w-full object-cover" data-alt="Neon abstract album cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDyRYobjSq_vyWv-bz7Uj1dxMxqPn82IC1d-BO9gZ_2Zc7In-jNuNsIdXn-d3QbsSW2nmagwMBL1V7I51f2OAemfFYDRL9GFALgPf8AZgR_wPL6BOtmGyxVdgFilWrb88B18in3QsFH6nWGMUmj3Zt-eYR9ZNOKY0zJUuorlaq8iXSpqaGzdDsf22o9WqLpNTF93aeniU7NIZwmf7x4ZtSham_bmZcfrlpMPO7BQpGv59rs7huoLozv1QAMevqMMIUqabMzw73bjX8"/>
+<div class="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-white text-lg">play_arrow</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-base font-bold truncate text-slate-900 dark:text-white">Blinding Lights</p>
+<p class="text-sm text-slate-500 dark:text-slate-400 truncate">The Weeknd</p>
+</div>
+<div class="flex items-center gap-2 text-slate-400">
+<div class="flex flex-col items-end">
+<span class="text-xs font-bold text-primary">3 dk</span>
+</div>
+<button class="p-2 hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[20px]">info</span>
+</button>
+</div>
+</div>
+<div class="group flex items-center gap-3 p-3 rounded-lg bg-surface-light dark:bg-surface-dark border border-transparent hover:border-primary/50 transition-all duration-300 shadow-sm hover:shadow-neon">
+<div class="relative shrink-0 size-14 rounded overflow-hidden">
+<img alt="Surfer catching a wave album cover" class="h-full w-full object-cover" data-alt="Surfer catching a wave album cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA2aw9qnU7c12Z4Vo7oMLr3RXUcPy3NCS3phaGXV6zgzMdEY4F348G7ucZ5aUHqMTGwt6cfaTnyhUtrKjLx8NSaUpmxuDXQh36ixQqDfa1dnBnLKqE7WaIhicLCat21LGr0E43FxZsRhcje_9xnAAfDLRNj2AOGlDDVB1bXFq7Eeg9CeYhXKauN2jG9AITh8Idbn6FNw7sYoE6OgphVSm5yHzMWsLlRpMd4kuY874ur57KabGU2-EWMLA7vh4c0fEKuwMQaSzP3sOY"/>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-base font-bold truncate text-slate-900 dark:text-white">Watermelon Sugar</p>
+<p class="text-sm text-slate-500 dark:text-slate-400 truncate">Harry Styles</p>
+</div>
+<div class="flex items-center gap-2 text-slate-400">
+<div class="flex flex-col items-end">
+<span class="text-xs font-bold text-slate-500">7 dk</span>
+</div>
+<button class="p-2 hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[20px]">info</span>
+</button>
+</div>
+</div>
+<div class="group flex items-center gap-3 p-3 rounded-lg bg-surface-light dark:bg-surface-dark border border-transparent hover:border-primary/50 transition-all duration-300 shadow-sm hover:shadow-neon">
+<div class="relative shrink-0 size-14 rounded overflow-hidden">
+<img alt="Headphones on blue background album art" class="h-full w-full object-cover" data-alt="Headphones on blue background album art" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCA8uvgUxPSLFIOJeXmPF5c1Q-7l7jcHbLOnutRRT1HrdIipgoO21_mZ15ToimMdBcyla74fTO_UQG7f0WYvfeIv7mgKUGhlIZAAGvVqt35ltzSAX2APd1fLnoE6cTxpif99Bjg4_nKaFAT4UUarNeU5zZIW-6MeDijBBfsdUHAUObfCbAOR1aURzzvckgkQe7sFSPYNaVpJs8WU8EdVYV_T3BblnlgwLcl3DQPzKjoj_yg2fyqufgKHdtb5kvreucbOFAqo88Ewaw"/>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-base font-bold truncate text-slate-900 dark:text-white">Good 4 U</p>
+<p class="text-sm text-slate-500 dark:text-slate-400 truncate">Olivia Rodrigo</p>
+</div>
+<div class="flex items-center gap-2 text-slate-400">
+<div class="flex flex-col items-end">
+<span class="text-xs font-bold text-slate-500">11 dk</span>
+</div>
+<button class="p-2 hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[20px]">info</span>
+</button>
+</div>
+</div>
+<div class="group flex items-center gap-3 p-3 rounded-lg bg-surface-light dark:bg-surface-dark border border-transparent hover:border-primary/50 transition-all duration-300 shadow-sm hover:shadow-neon">
+<div class="relative shrink-0 size-14 rounded overflow-hidden">
+<img alt="City skyline at night album cover" class="h-full w-full object-cover" data-alt="City skyline at night album cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDG4Fw34rt1ARreAwJ1Y9A4cktv2NGAX7GZXOC4-IHK1HPT2o7ov-120Q_QD-LBrgkbcYziocDB4HhF_gHNBf6bN3_O1d1LtRqSENhzGdCm0oqD6LWatTR0Apdp-T6BLfG6aw8UrODAUUhUsQFfC2knUPY7-Q0OKl_cJvjVycBMXQCx43VNHIooOyXFECcsSYf0TTnPrwzlYh3zaSTS5GaqLZNi8tktdNFoFotlDkQlmElJNL20AGlpDCtMR-Vt9YvlYOvjesoprfY"/>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-base font-bold truncate text-slate-900 dark:text-white">Save Your Tears</p>
+<p class="text-sm text-slate-500 dark:text-slate-400 truncate">The Weeknd &amp; Ariana Grande</p>
+</div>
+<div class="flex items-center gap-2 text-slate-400">
+<div class="flex flex-col items-end">
+<span class="text-xs font-bold text-slate-500">15 dk</span>
+</div>
+<button class="p-2 hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[20px]">info</span>
+</button>
+</div>
+</div>
+<div class="group flex items-center gap-3 p-3 rounded-lg bg-surface-light dark:bg-surface-dark border border-transparent hover:border-primary/50 transition-all duration-300 shadow-sm hover:shadow-neon">
+<div class="relative shrink-0 size-14 rounded overflow-hidden">
+<img alt="DJ mixing music album cover" class="h-full w-full object-cover" data-alt="DJ mixing music album cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDCK9y3v98iBxTu2g1OwbFWdWaI9Ucw4avr3v42f6WRGd-LJl8bMmJDD3eV-Uo-DrMIZf6viLMAQ4EHLoCe5SkVQvVISAcNopxIRnyqNDHjoOIM783pe2q9c6cuZn6LRayRXDuh90x7fP2l7XnKBx11B2pJMZ3Iz2QQImbzAvEFTKoHBi2GpzYLsVXOv0_Z_bQ0aCwxzGdH2eL9OSwSsV14PmltKmWQg2uzTAFdkS18ev3pY3paDzH2Qw5rk1bXgEWg9N7k5K6o32w"/>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-base font-bold truncate text-slate-900 dark:text-white">Stay</p>
+<p class="text-sm text-slate-500 dark:text-slate-400 truncate">The Kid LAROI &amp; Justin Bieber</p>
+</div>
+<div class="flex items-center gap-2 text-slate-400">
+<div class="flex flex-col items-end">
+<span class="text-xs font-bold text-slate-500">18 dk</span>
+</div>
+<button class="p-2 hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[20px]">info</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+</main>
+<div class="fixed bottom-20 left-0 right-0 p-4 bg-gradient-to-t from-background-dark via-background-dark/95 to-transparent z-40 flex justify-center max-w-md mx-auto pointer-events-none">
+<button class="pointer-events-auto w-full bg-blue-600 hover:bg-blue-500 text-white h-14 rounded-xl font-bold text-lg flex items-center justify-center gap-3 shadow-lg shadow-blue-900/40 transition-all active:scale-95">
+<span class="material-symbols-outlined">add_circle</span>
+                Şarkı Ekle
+            </button>
+</div>
+<nav class="fixed bottom-0 left-0 right-0 z-50 bg-background-light dark:bg-surface-dark border-t border-slate-200 dark:border-white/5 max-w-md mx-auto px-6 py-3 flex justify-between items-center text-xs font-medium">
+<button class="flex flex-col items-center gap-1 text-primary">
+<span class="material-symbols-outlined text-2xl">queue_music</span>
+<span>Kuyruk</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400 hover:text-white transition-colors">
+<span class="material-symbols-outlined text-2xl">search</span>
+<span>Gözat</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400 hover:text-white transition-colors">
+<span class="material-symbols-outlined text-2xl">token</span>
+<span>Jetonlar</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400 hover:text-white transition-colors">
+<span class="material-symbols-outlined text-2xl">person</span>
+<span>Profil</span>
+</button>
+</nav>
+</div>
+
+</body></html>

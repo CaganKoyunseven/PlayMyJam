@@ -1,6 +1,7 @@
+import { createHmac } from 'crypto';
+
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { createHmac } from 'crypto';
 
 // Standalone Next.js (Docker) runs middleware in Node.js — crypto module is available
 function buildAdminToken(username: string, password: string): string {

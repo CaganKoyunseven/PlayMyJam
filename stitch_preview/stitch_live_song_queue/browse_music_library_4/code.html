@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>PlayMyJam - Flowing Discover</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f20da6",
+                        "background-light": "#f8f5f7",
+                        "background-dark": "#160912",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            min-height: 100dvh;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white transition-colors duration-300">
+<div class="relative flex h-full min-h-screen w-full flex-col overflow-x-hidden pb-24">
+<header class="sticky top-0 z-50 flex items-center justify-between p-4 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-xl">
+<button class="flex size-10 shrink-0 items-center justify-center rounded-full active:bg-black/5 dark:active:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-2xl">arrow_back</span>
+</button>
+<h2 class="text-lg font-bold leading-tight tracking-tight flex-1 text-center">Discover</h2>
+<button class="flex size-10 items-center justify-center rounded-full bg-transparent active:bg-black/5 dark:active:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-2xl">search</span>
+</button>
+</header>
+<main class="flex flex-col">
+<section class="relative">
+<div class="relative w-full h-48 overflow-hidden group">
+<div class="absolute inset-0 bg-cover bg-center" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuA57lcROzJ_-GrgsbQ8V_I4T_-5G6jrwkfZ7Y1adcCZNBub7sDqEwTgvqMCKAlo4N8ycC0-D6g3N1EYKbzly26FBIh19GGu8fw0rUK1LCVDTQoCMRwDzoD1Qho4QZRn63VSZ06WoXcp3ngNEem5FGKv3nRJwPAOw64JqSC624uxiBy7hYQi4fk4K0SPQMxSjdwdHTe-y1DqFWy-TlJ7I5XF-isPaJqeyFPdypVTs5OBPMaG3UNkHE8S1rQLflGKbN-KJiUXhWz30D0");'></div>
+<div class="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/20 to-transparent"></div>
+<div class="absolute bottom-4 left-4">
+<span class="px-2 py-0.5 rounded-md bg-primary text-[10px] font-bold uppercase tracking-wider text-white mb-2 inline-block">Trending Now</span>
+<h3 class="text-2xl font-extrabold text-white">Popular Picks</h3>
+</div>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-4 px-4 py-3 active:bg-white/5 transition-colors border-b border-white/5">
+<div class="relative h-14 w-14 flex-shrink-0">
+<img alt="Blinding Lights" class="h-full w-full object-cover rounded-lg shadow-lg" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA57lcROzJ_-GrgsbQ8V_I4T_-5G6jrwkfZ7Y1adcCZNBub7sDqEwTgvqMCKAlo4N8ycC0-D6g3N1EYKbzly26FBIh19GGu8fw0rUK1LCVDTQoCMRwDzoD1Qho4QZRn63VSZ06WoXcp3ngNEem5FGKv3nRJwPAOw64JqSC624uxiBy7hYQi4fk4K0SPQMxSjdwdHTe-y1DqFWy-TlJ7I5XF-isPaJqeyFPdypVTs5OBPMaG3UNkHE8S1rQLflGKbN-KJiUXhWz30D0"/>
+<div class="absolute -top-1 -right-1 flex items-center gap-0.5 bg-black/80 backdrop-blur-md rounded-full px-1.5 py-0.5 border border-white/10">
+<span class="text-[10px] font-bold text-white leading-none">2</span>
+<span class="material-symbols-outlined text-primary" style="font-size: 10px;">token</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="text-sm font-bold text-white truncate">Blinding Lights</h4>
+<p class="text-xs text-white/50 truncate">The Weeknd</p>
+</div>
+<button class="size-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-primary/20 hover:text-primary transition-all active:scale-90">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+<div class="flex items-center gap-4 px-4 py-3 active:bg-white/5 transition-colors border-b border-white/5">
+<div class="relative h-14 w-14 flex-shrink-0">
+<img alt="Levitating" class="h-full w-full object-cover rounded-lg shadow-lg" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCnM53goFcQ-LjGMrgV0WOoAW0AIRRftsRbSUjeZ31tQo0Q_zAlagWWTq-Nl9Wb-N18MoSTaIku7nDC55cRyS1x9fco7lu9-8O6I0qo_P269FipyXTn4qQU984yGrhid259sHOfhooOlOjN-rFXoN_lwr6JnGdyMmxaJJNk53jjzvC9d_7tcTshoN8Qke_bghoIlGoDcpXJpbTbAhqgX8bAY43YEy3FjfnfXGKhRvZfhUFadj5o8Z0xj30QbMIRBgxdOnVmPuP5tmI"/>
+<div class="absolute -top-1 -right-1 flex items-center gap-0.5 bg-black/80 backdrop-blur-md rounded-full px-1.5 py-0.5 border border-white/10">
+<span class="text-[10px] font-bold text-white leading-none">3</span>
+<span class="material-symbols-outlined text-primary" style="font-size: 10px;">token</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="text-sm font-bold text-white truncate">Levitating</h4>
+<p class="text-xs text-white/50 truncate">Dua Lipa</p>
+</div>
+<button class="size-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-primary/20 hover:text-primary transition-all active:scale-90">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+<div class="flex items-center gap-4 px-4 py-3 active:bg-white/5 transition-colors border-b border-white/5">
+<div class="relative h-14 w-14 flex-shrink-0">
+<img alt="Peaches" class="h-full w-full object-cover rounded-lg shadow-lg" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBJwAG6J2PrBfSZQDysX6PadAud-AcbP4qh1XJUbLp-AB2kGyBklzhPFSashtIJKTdp2Dge0p5ZcD2t4YrcaoEIbI_slPG0WSAAIODErSH2HVyPGRYhmtq6SkKW6hu-AWZbCgjO3yXE8MBpc3nM3t0uZQTUFom1IdIti8yzV7OZ6nbJEqyfZdftHSin4vhf3m4abfcNG-wsECF1KocBg1GAOfCm_2yGBRADwOyUGVVtf5ae63GzYSglrlS7H34B7q5N8B1ZS0AzxnU"/>
+<div class="absolute -top-1 -right-1 flex items-center gap-0.5 bg-black/80 backdrop-blur-md rounded-full px-1.5 py-0.5 border border-white/10">
+<span class="text-[10px] font-bold text-white leading-none">2</span>
+<span class="material-symbols-outlined text-primary" style="font-size: 10px;">token</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="text-sm font-bold text-white truncate">Peaches</h4>
+<p class="text-xs text-white/50 truncate">Justin Bieber</p>
+</div>
+<button class="size-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-primary/20 hover:text-primary transition-all active:scale-90">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+</div>
+</section>
+<section class="mt-8">
+<div class="relative w-full h-48 overflow-hidden group">
+<div class="absolute inset-0 bg-cover bg-center" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDxt_HTwlqKR52lQsFiv2IC3vVmCU3zmgGvULjEKx-GlO2cjFc9b0N3bVuaA8eNojgaP2rKArwy7HxN30jLefdOujgnh_J7BkAaJiUJCZrowM6PKyg1gk5StU63aXJTv-UbAGIvECOso9ZsUwaF1PllxbtrXriy-aIxJgowW-sF3uFghVmah8bZxcpwXbftbHAwR4bRG1alx_hOskvf15pvsn-uzzX_aE5OnzYOlwTXG5czAi65hV_jiUIqxhsgb2v3YQCzqSJPRs4");'></div>
+<div class="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/20 to-transparent"></div>
+<div class="absolute bottom-4 left-4">
+<span class="px-2 py-0.5 rounded-md bg-primary text-[10px] font-bold uppercase tracking-wider text-white mb-2 inline-block">Just Added</span>
+<h3 class="text-2xl font-extrabold text-white">New Releases</h3>
+</div>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-4 px-4 py-3 active:bg-white/5 transition-colors border-b border-white/5">
+<div class="relative h-14 w-14 flex-shrink-0">
+<img alt="Save Your Tears" class="h-full w-full object-cover rounded-lg shadow-lg" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA97JH5NhyodkdbzwMiNbVgjK6s-c_VQSVX4ew9GcAYpy4WIU4nNZPgNqs3xG2x0wbuhYu9Jn4Iw7KK4ZZIFPWbVC1npKHXR95Xp6EuswK0QPI35RQDYtfFMopsEDZCj25-vPAYI8dXokT3lod528lg-oO8Bhk7wFed-PjDdOZcvwcw1pOprvwK2Ec-CTkjwVHvg8mHvLGVCPtR9dXum7LxejJDl5UmP1Q3XT4o9AT1LNaFyuRKRFlHVn7DNJUH-Fkf77WFOyZvVxI"/>
+<div class="absolute -top-1 -right-1 flex items-center gap-0.5 bg-black/80 backdrop-blur-md rounded-full px-1.5 py-0.5 border border-white/10">
+<span class="text-[10px] font-bold text-white leading-none">1</span>
+<span class="material-symbols-outlined text-primary" style="font-size: 10px;">token</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="text-sm font-bold text-white truncate">Save Your Tears</h4>
+<p class="text-xs text-white/50 truncate">The Weeknd</p>
+</div>
+<button class="size-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-primary/20 hover:text-primary transition-all active:scale-90">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+<div class="flex items-center gap-4 px-4 py-3 active:bg-white/5 transition-colors border-b border-white/5">
+<div class="relative h-14 w-14 flex-shrink-0">
+<img alt="Kiss Me More" class="h-full w-full object-cover rounded-lg shadow-lg" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxt_HTwlqKR52lQsFiv2IC3vVmCU3zmgGvULjEKx-GlO2cjFc9b0N3bVuaA8eNojgaP2rKArwy7HxN30jLefdOujgnh_J7BkAaJiUJCZrowM6PKyg1gk5StU63aXJTv-UbAGIvECOso9ZsUwaF1PllxbtrXriy-aIxJgowW-sF3uFghVmah8bZxcpwXbftbHAwR4bRG1alx_hOskvf15pvsn-uzzX_aE5OnzYOlwTXG5czAi65hV_jiUIqxhsgb2v3YQCzqSJPRs4"/>
+<div class="absolute -top-1 -right-1 flex items-center gap-0.5 bg-black/80 backdrop-blur-md rounded-full px-1.5 py-0.5 border border-white/10">
+<span class="text-[10px] font-bold text-white leading-none">3</span>
+<span class="material-symbols-outlined text-primary" style="font-size: 10px;">token</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="text-sm font-bold text-white truncate">Kiss Me More</h4>
+<p class="text-xs text-white/50 truncate">Doja Cat</p>
+</div>
+<button class="size-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-primary/20 hover:text-primary transition-all active:scale-90">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+<div class="flex items-center gap-4 px-4 py-3 active:bg-white/5 transition-colors border-b border-white/5">
+<div class="relative h-14 w-14 flex-shrink-0">
+<img alt="Good 4 U" class="h-full w-full object-cover rounded-lg shadow-lg" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAwPeap_KsA6nnTpNPsIEp7_bj-to2IFO3A-JM618YMJL1bSANaqFmrwd9Hb5KQk3mYrcp5xdaMdtCQY7TXPeUBGpsVJBJKlPtONJuVL_W9HVep55J24HUTfA5rMwGUu-YNkhRCFH6IQXjDPfZDbJ8ueCZzd7BHBJ1cJyfnaOKLaElxQMpEBHJ6COgEC1jvCnwlNdA6SJOts58zza9AmcNXx0vLbkAThpqu-LTb6DRbpGtyfJ5GeLeHORokCrofW35Soejo7Ez0IfY"/>
+<div class="absolute -top-1 -right-1 flex items-center gap-0.5 bg-black/80 backdrop-blur-md rounded-full px-1.5 py-0.5 border border-white/10">
+<span class="text-[10px] font-bold text-white leading-none">2</span>
+<span class="material-symbols-outlined text-primary" style="font-size: 10px;">token</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="text-sm font-bold text-white truncate">Good 4 U</h4>
+<p class="text-xs text-white/50 truncate">Olivia Rodrigo</p>
+</div>
+<button class="size-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-primary/20 hover:text-primary transition-all active:scale-90">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+</div>
+</section>
+</main>
+<div class="fixed bottom-0 left-0 right-0 z-50 border-t border-white/5 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-2xl px-6 pb-6 pt-3">
+<div class="flex items-center justify-between gap-4">
+<a class="group flex flex-1 flex-col items-center justify-end gap-1.5" href="#">
+<div class="flex h-6 items-center justify-center text-slate-400 group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined">home</span>
+</div>
+<p class="text-[10px] font-medium text-slate-400 group-hover:text-primary uppercase tracking-tight">Home</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1.5" href="#">
+<div class="flex h-6 items-center justify-center text-primary">
+<span class="material-symbols-outlined fill-1" style="font-variation-settings: 'FILL' 1;">explore</span>
+</div>
+<p class="text-[10px] font-bold text-primary uppercase tracking-tight">Discover</p>
+</a>
+<a class="group flex flex-1 flex-col items-center justify-end gap-1.5" href="#">
+<div class="flex h-6 items-center justify-center text-slate-400 group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined">queue_music</span>
+</div>
+<p class="text-[10px] font-medium text-slate-400 group-hover:text-primary uppercase tracking-tight">Queue</p>
+</a>
+<a class="group flex flex-1 flex-col items-center justify-end gap-1.5" href="#">
+<div class="flex h-6 items-center justify-center text-slate-400 group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined">person</span>
+</div>
+<p class="text-[10px] font-medium text-slate-400 group-hover:text-primary uppercase tracking-tight">Profile</p>
+</a>
+</div>
+</div>
+</div>
+
+</body></html>

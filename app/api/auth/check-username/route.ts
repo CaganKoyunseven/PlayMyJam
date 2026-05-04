@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { supabase } from '@/lib/supabase';
 
 export async function GET(req: NextRequest) {
@@ -8,11 +9,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('username', username)
-      .maybeSingle();
+    const { data, error } = await supabase.from('profiles').select('id').eq('username', username).maybeSingle();
 
     if (error) {
       return NextResponse.json({ error: 'Failed to check username' }, { status: 500 });
