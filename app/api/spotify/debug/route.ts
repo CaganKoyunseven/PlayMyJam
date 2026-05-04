@@ -86,7 +86,9 @@ export async function GET() {
       const tokenData = await tokenRes.json();
       const ccToken = tokenData.access_token;
 
-      const tracksRes = await fetch(`https://api.spotify.com/v1/tracks?ids=${trackIds.slice(0, 3).join(',')}`, { headers: { Authorization: `Bearer ${ccToken}` } });
+      const tracksRes = await fetch(`https://api.spotify.com/v1/tracks?ids=${trackIds.slice(0, 3).join(',')}`, {
+        headers: { Authorization: `Bearer ${ccToken}` },
+      });
       if (tracksRes.ok) {
         const data = await tracksRes.json();
         tracksApiTest = {
