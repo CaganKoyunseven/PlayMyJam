@@ -9,11 +9,7 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { data: venue } = await supabase
-    .from('venues')
-    .select('spotify_access_token')
-    .eq('id', DEFAULT_VENUE_ID)
-    .single();
+  const { data: venue } = await supabase.from('venues').select('spotify_access_token').eq('id', DEFAULT_VENUE_ID).single();
 
   if (!venue?.spotify_access_token) {
     return NextResponse.json({ error: 'No venue token' });
@@ -27,8 +23,7 @@ export async function GET() {
   });
   const meData = meRes.ok ? await meRes.json() : null;
   const playlists = meData?.items ?? [];
-  const firstMusicPlaylist =
-    playlists.find((p: { name: string }) => p.name !== 'Deutsch Podcast A1/A2') ?? playlists[0];
+  const firstMusicPlaylist = playlists.find((p: { name: string }) => p.name !== 'Deutsch Podcast A1/A2') ?? playlists[0];
 
   if (!firstMusicPlaylist) {
     return NextResponse.json({ error: 'No playlists found' });
@@ -91,12 +86,7 @@ export async function GET() {
       const tokenData = await tokenRes.json();
       const ccToken = tokenData.access_token;
 
-      const tracksRes = await fetch(
-        `https://api.spotify.com/v1/tracks?ids=${trackIds.slice(0, 3).join(',')}`,
-        {
-          headers: { Authorization: `Bearer ${ccToken}` },
-        }
-      );
+      const tracksRes = await fetch(`https://api.spotify.com/v1/tracks?ids=${trackIds.slice(0, 3).join(',')}`, { headers: { Authorization: `Bearer ${ccToken}` } });
       if (tracksRes.ok) {
         const data = await tracksRes.json();
         tracksApiTest = {
