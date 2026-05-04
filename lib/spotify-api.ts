@@ -89,19 +89,28 @@ export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playl
     }
   }
 
-  // Step 2: Scrape track IDs from Spotify's public web page
-  // (Dev Mode strips tracks from API responses, but the public page has them)
-  const scrapedTrackIds = await scrapePlaylistTrackIds(spotifyPlaylistId);
-  console.log(`[importPlaylist] scraped ${scrapedTrackIds.length} track IDs from web page`);
+  // Step 2: Extract track IDs from API response if available (works for allowlisted Test Users)
+  let trackIds: string[] = [];
+  if (playlistData?.tracks?.items) {
+    trackIds = playlistData.tracks.items.map((item: { track?: { id: string } }) => item.track?.id).filter(Boolean);
+    console.log(`[importPlaylist] found ${trackIds.length} track IDs via API`);
+  }
 
-  if (scrapedTrackIds.length === 0) {
+  // Step 3: Fallback to scraping only if API returned 0 tracks (Dev Mode restriction)
+  if (trackIds.length === 0) {
+    console.log('[importPlaylist] API returned 0 tracks, falling back to scraping...');
+    trackIds = await scrapePlaylistTrackIds(spotifyPlaylistId);
+    console.log(`[importPlaylist] scraped ${trackIds.length} track IDs from web page`);
+  }
+
+  if (trackIds.length === 0) {
     return { playlistId: '', imported: 0 };
   }
 
-  // Step 3: Batch-fetch full track details via /tracks API (up to 50 per request)
+  // Step 4: Batch-fetch full track details via /tracks API (up to 50 per request)
   const tracks: SpotifyTrackItem[] = [];
-  for (let i = 0; i < scrapedTrackIds.length; i += 50) {
-    const batch = scrapedTrackIds.slice(i, i + 50);
+  for (let i = 0; i < trackIds.length; i += 50) {
+    const batch = trackIds.slice(i, i + 50);
     try {
       const data = await spotifyFetch(`/tracks?ids=${batch.join(',')}`, false);
       for (const t of data?.tracks ?? []) {
