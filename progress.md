@@ -224,26 +224,26 @@ Without these, `spotify_access_token` stays NULL after OAuth (PostgREST ignores 
 
 ### Known Spotify Issues / Debugging
 
-**Import returns 403 "Forbidden" from Spotify** (status as of 2026-05-04)
+**Import returns 0 tracks or 403 "Forbidden"** (Status: Investigating / Patching)
 
-**Root cause hypothesis:** The OAuth token stored in the DB may lack `playlist-read-private` scope
-if the venue owner connected Spotify before that scope was included in the auth URL. Another
-possibility: Spotify app is in Development Mode and the playlist owner is not in the allowlist.
+**Root cause found (2026-05-05):** Spotify apps in "Development Mode" have severe restrictions on the `/playlists/{id}/tracks` endpoint and the `tracks` object inside `/playlists/{id}`. Even with correct scopes (`playlist-read-private`), the API returns 403 Forbidden for sub-endpoints or simply omits the `tracks` field from the main playlist response if the user is not explicitly allowlisted in the Spotify Dev Dashboard.
 
 **What was tried:**
-1. Browser called `importPlaylist()` directly → 403 because `SPOTIFY_CLIENT_SECRET` undefined in client → Created `/api/spotify/import` server-side proxy route
-2. Server route validates `playlistId` with `^[a-zA-Z0-9]+$` regex (CodeQL SSRF fix)
-3. Added `console.error('[spotify/import] error:', msg)` in catch block → see Railway logs for exact Spotify error
-4. Server-side import still returns 403 "Forbidden" from Spotify API
+1. **Fallback API calls:** Tried using Client Credentials (CC) instead of Venue (OAuth) token. CC works for public playlists but Spotify still blocks `/tracks` in Dev Mode.
+2. **Field filtering:** Tried `?fields=tracks(items(track(id...)))` to minimize response size — no effect, still blocked.
+3. **Market parameter:** Tried `?market=from_token` to bypass geo-restrictions — no effect.
 
-**Fix applied (2026-05-04):**
-- Created `/api/spotify/disconnect` route — clears venue tokens from DB
-- Added "Disconnect" + "Reconnect with fresh permissions" buttons to admin Spotify tab
-- Enhanced `spotifyFetch()` error handling — now logs full HTTP status + response body
-- Import route now returns `hint` field with actionable advice on 403 errors
+**Current Solution: Hybrid Scraping (Applied 2026-05-05)**
+Since the Spotify Web API is blocked, we now use a hybrid approach in `lib/spotify-api.ts`:
+1. **Scraping:** The server fetches the public Spotify playlist page (`open.spotify.com/playlist/{id}`).
+2. **Extraction:** A regex pattern `\/track\/([a-zA-Z0-9]{22})` extracts track IDs from the page HTML. This bypasses the API restrictions entirely.
+3. **Batch Enrichment:** Once we have the IDs, we call the `/tracks?ids=...` API endpoint using Client Credentials to get the metadata (title, artist, album art, duration). **Note:** The `/tracks` (plural) endpoint is NOT blocked in Dev Mode, only the playlist-specific tracks sub-resource.
+4. **Supabase Sync:** Enriched tracks are upserted into the `songs` and `playlist_songs` tables.
 
-**To resolve:** Admin should click "Disconnect" → then "Connect Spotify Account" → fresh OAuth with all scopes (`playlist-read-private`, `playlist-read-collaborative`) → re-import playlists.
-If still 403 after reconnect: Spotify app is in Development Mode — add venue Spotify account to Spotify Developer Dashboard → User Management → Allowlist.
+**Remaining Tasks / Blockers:**
+- [ ] **Lint/Prettier Fixes:** Recent changes to the debug route and scraping logic introduced formatting errors that are blocking Railway CI.
+- [ ] **Verification:** Confirm that the scraping logic works correctly on Railway's IP range (Spotify sometimes blocks data center IPs).
+- [ ] **Extended Quota:** Long-term fix is to apply for "Extended Quota" on the Spotify Developer Dashboard to remove Dev Mode limits.
 
 ---
 
