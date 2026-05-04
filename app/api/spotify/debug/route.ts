@@ -27,9 +27,8 @@ export async function GET() {
   });
   const meData = meRes.ok ? await meRes.json() : null;
   const playlists = meData?.items ?? [];
-  const firstMusicPlaylist = playlists.find(
-    (p: { name: string }) => p.name !== 'Deutsch Podcast A1/A2'
-  ) ?? playlists[0];
+  const firstMusicPlaylist =
+    playlists.find((p: { name: string }) => p.name !== 'Deutsch Podcast A1/A2') ?? playlists[0];
 
   if (!firstMusicPlaylist) {
     return NextResponse.json({ error: 'No playlists found' });
@@ -39,13 +38,15 @@ export async function GET() {
   const pname = firstMusicPlaylist.name;
 
   // Test scraping: fetch the public playlist page
-  let scrapeResult: {
-    status: number;
-    htmlLength: number;
-    trackIdsFound: number;
-    sampleTrackIds: string[];
-    htmlSnippet: string;
-  } | string = 'not tested';
+  let scrapeResult:
+    | {
+        status: number;
+        htmlLength: number;
+        trackIdsFound: number;
+        sampleTrackIds: string[];
+        htmlSnippet: string;
+      }
+    | string = 'not tested';
 
   try {
     const res = await fetch(`https://open.spotify.com/playlist/${pid}`, {
@@ -92,7 +93,9 @@ export async function GET() {
 
       const tracksRes = await fetch(
         `https://api.spotify.com/v1/tracks?ids=${trackIds.slice(0, 3).join(',')}`,
-        { headers: { Authorization: `Bearer ${ccToken}` } }
+        {
+          headers: { Authorization: `Bearer ${ccToken}` },
+        }
       );
       if (tracksRes.ok) {
         const data = await tracksRes.json();
@@ -100,7 +103,11 @@ export async function GET() {
           status: 200,
           tracksReturned: data.tracks?.length,
           sample: data.tracks?.[0]
-            ? { id: data.tracks[0].id, name: data.tracks[0].name, artist: data.tracks[0].artists?.[0]?.name }
+            ? {
+                id: data.tracks[0].id,
+                name: data.tracks[0].name,
+                artist: data.tracks[0].artists?.[0]?.name,
+              }
             : null,
         };
       } else {
