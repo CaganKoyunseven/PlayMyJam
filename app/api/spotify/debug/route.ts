@@ -32,6 +32,22 @@ export async function GET() {
   const pid = firstMusicPlaylist.id;
   const pname = firstMusicPlaylist.name;
 
+  // Test API: fetch playlist details including tracks
+  let apiResult: { tracksFound: number; sampleTracks: string[] } | string = 'not tested';
+  try {
+    const apiData = await (
+      await fetch(`https://api.spotify.com/v1/playlists/${pid}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+    ).json();
+    apiResult = {
+      tracksFound: apiData?.tracks?.total ?? 0,
+      sampleTracks: (apiData?.tracks?.items ?? []).slice(0, 3).map((it: { track?: { name: string } }) => it.track?.name),
+    };
+  } catch (e) {
+    apiResult = (e as Error).message;
+  }
+
   // Test scraping: fetch the public playlist page
   let scrapeResult:
     | {
@@ -113,6 +129,7 @@ export async function GET() {
   return NextResponse.json({
     testPlaylist: { id: pid, name: pname },
     allPlaylists: playlists.map((p: { id: string; name: string }) => ({ id: p.id, name: p.name })),
+    apiResult,
     scrapeResult,
     tracksApiTest,
   });
