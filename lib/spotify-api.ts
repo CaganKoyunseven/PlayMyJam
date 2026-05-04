@@ -76,59 +76,51 @@ export type SpotifyTrackItem = {
 };
 
 export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playlistId: string; imported: number }> {
+  // Step 1: Get playlist metadata from API (works in Dev Mode)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let playlistData: any = null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let rawItems: any[] = [];
-
-  // Approach 1: Venue token — full playlist response (embeds up to 100 tracks)
   try {
     playlistData = await spotifyFetch(`/playlists/${spotifyPlaylistId}`, true);
-    rawItems = playlistData?.tracks?.items ?? [];
-    console.log(`[importPlaylist] venue token: ${rawItems.length} raw items, total=${playlistData?.tracks?.total}`);
-  } catch (e) {
-    console.error('[importPlaylist] venue token failed:', (e as Error).message);
-  }
-
-  // Approach 2: Client Credentials — works for public playlists, no Dev Mode user restriction
-  if (rawItems.length === 0) {
+  } catch {
     try {
-      const ccData = await spotifyFetch(`/playlists/${spotifyPlaylistId}`, false);
-      if (!playlistData) playlistData = ccData;
-      rawItems = ccData?.tracks?.items ?? [];
-      console.log(`[importPlaylist] CC /playlists: ${rawItems.length} raw items`);
-    } catch (e) {
-      console.error('[importPlaylist] CC /playlists failed:', (e as Error).message);
+      playlistData = await spotifyFetch(`/playlists/${spotifyPlaylistId}`, false);
+    } catch {
+      /* metadata will be null, that's ok */
     }
   }
 
-  // Approach 3: Client Credentials on /tracks endpoint specifically
-  if (rawItems.length === 0) {
+  // Step 2: Scrape track IDs from Spotify's public web page
+  // (Dev Mode strips tracks from API responses, but the public page has them)
+  const scrapedTrackIds = await scrapePlaylistTrackIds(spotifyPlaylistId);
+  console.log(`[importPlaylist] scraped ${scrapedTrackIds.length} track IDs from web page`);
+
+  if (scrapedTrackIds.length === 0) {
+    return { playlistId: '', imported: 0 };
+  }
+
+  // Step 3: Batch-fetch full track details via /tracks API (up to 50 per request)
+  const tracks: SpotifyTrackItem[] = [];
+  for (let i = 0; i < scrapedTrackIds.length; i += 50) {
+    const batch = scrapedTrackIds.slice(i, i + 50);
     try {
-      const tracksData = await spotifyFetch(`/playlists/${spotifyPlaylistId}/tracks?limit=100`, false);
-      rawItems = tracksData?.items ?? [];
-      console.log(`[importPlaylist] CC /tracks: ${rawItems.length} raw items`);
+      const data = await spotifyFetch(`/tracks?ids=${batch.join(',')}`, false);
+      for (const t of data?.tracks ?? []) {
+        if (!t?.id) continue;
+        tracks.push({
+          spotifyTrackId: t.id,
+          title: t.name,
+          artist: t.artists?.map((a: { name: string }) => a.name).join(', ') ?? 'Unknown',
+          album: t.album?.name ?? '',
+          albumArt: t.album?.images?.[0]?.url ?? null,
+          durationMs: t.duration_ms ?? 0,
+        });
+      }
     } catch (e) {
-      console.error('[importPlaylist] CC /tracks failed:', (e as Error).message);
+      console.error('[importPlaylist] /tracks batch failed:', (e as Error).message);
     }
   }
 
-  // Extract valid music tracks (filter out podcasts, null entries, local files)
-  const tracks: SpotifyTrackItem[] = rawItems
-    .filter((i: any) => i?.track?.id && i?.track?.name) // eslint-disable-line @typescript-eslint/no-explicit-any
-    .map(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (i: any) => ({
-        spotifyTrackId: i.track.id,
-        title: i.track.name,
-        artist: i.track.artists?.map((a: { name: string }) => a.name).join(', ') ?? 'Unknown',
-        album: i.track.album?.name ?? '',
-        albumArt: i.track.album?.images?.[0]?.url ?? null,
-        durationMs: i.track.duration_ms ?? 0,
-      })
-    );
-
-  console.log(`[importPlaylist] extracted ${tracks.length} valid tracks from ${rawItems.length} raw items`);
+  console.log(`[importPlaylist] fetched ${tracks.length} full tracks from API`);
 
   if (tracks.length === 0) {
     return { playlistId: '', imported: 0 };
@@ -195,6 +187,39 @@ export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playl
   }
 
   return { playlistId, imported: tracks.length };
+}
+
+// ── Scrape track IDs from Spotify public playlist page ───────
+// Spotify Dev Mode blocks track data via API, but the public web page
+// at open.spotify.com/playlist/{id} lists all tracks with links.
+// We extract track IDs from those links.
+
+async function scrapePlaylistTrackIds(playlistId: string): Promise<string[]> {
+  try {
+    const res = await fetch(`https://open.spotify.com/playlist/${playlistId}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; PlayMyJam/1.0)',
+        Accept: 'text/html',
+      },
+    });
+    if (!res.ok) {
+      console.error(`[scrapePlaylist] HTTP ${res.status} for playlist ${playlistId}`);
+      return [];
+    }
+    const html = await res.text();
+
+    // Extract track IDs from links like /track/0MAAh257gKxFrJDzfJ4gHC
+    const trackIdPattern = /\/track\/([a-zA-Z0-9]{22})/g;
+    const ids = new Set<string>();
+    let match;
+    while ((match = trackIdPattern.exec(html)) !== null) {
+      ids.add(match[1]);
+    }
+    return Array.from(ids);
+  } catch (e) {
+    console.error('[scrapePlaylist] failed:', (e as Error).message);
+    return [];
+  }
 }
 
 // ── Track search (client credentials) ────────────────────────
