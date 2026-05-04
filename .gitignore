@@ -41,3 +41,9 @@ yarn-error.log*
 next-env.d.ts
 
 certificates
+
+# Local tooling / previews
+.claude/
+stitch_preview/
+stitch_live_song_queue.zip
+docs/superpowers/
