@@ -3,7 +3,7 @@ import { DEFAULT_VENUE_ID } from './constants';
 
 const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID!;
 const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET!;
-const REDIRECT_URI = process.env.SPOTIFY_REDIRECT_URI || 'http://localhost:3000/api/spotify/callback';
+const REDIRECT_URI = (process.env.SPOTIFY_REDIRECT_URI || 'http://localhost:3000/api/spotify/callback').trim();
 
 const SCOPES = [
   'user-read-playback-state',
