@@ -116,7 +116,7 @@ export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playl
         });
       }
     } catch (e) {
-      console.error(`[importPlaylist] /tracks batch failed:`, (e as Error).message);
+      console.error('[importPlaylist] /tracks batch failed:', (e as Error).message);
     }
   }
 
