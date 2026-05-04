@@ -17,11 +17,11 @@ export default function TokensPage() {
         >
           <span className="material-symbols-outlined">arrow_back</span>
         </button>
-        <h2 className="flex-1 pr-10 text-center text-lg font-bold">Token Satın Al</h2>
+        <h2 className="flex-1 pr-10 text-center text-lg font-bold">Buy Tokens</h2>
       </header>
 
       <div className="flex-1 space-y-4 overflow-y-auto p-4 pb-28">
-        <p className="text-center text-sm text-slate-400">Her token ile bir şarkıyı kuyruğa ekleyebilirsin.</p>
+        <p className="text-center text-sm text-slate-400">Each token lets you add a song to the queue.</p>
 
         <div className="mt-2 flex flex-col gap-4">
           {tokenPackages.map(pkg => (
@@ -33,7 +33,7 @@ export default function TokensPage() {
             >
               {pkg.popular && (
                 <div className="bg-primary absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-[10px] font-bold tracking-widest whitespace-nowrap text-white uppercase">
-                  En Avantajlı
+                  Best Value
                 </div>
               )}
 
@@ -72,13 +72,13 @@ export default function TokensPage() {
                   pkg.popular ? 'bg-primary shadow-primary/25 text-white shadow-lg' : 'bg-white/10 text-white hover:bg-white/20'
                 }`}
               >
-                Satın Al
+                Buy Now
               </button>
             </div>
           ))}
         </div>
 
-        <p className="pt-2 text-center text-xs text-slate-500">Ödemeler güvenli ve şifreli olarak işlenir.</p>
+        <p className="pt-2 text-center text-xs text-slate-500">Payments are processed securely and encrypted.</p>
       </div>
 
       <BottomNav active="tokens" />
