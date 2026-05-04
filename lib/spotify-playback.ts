@@ -23,14 +23,7 @@ export const defaultPlaybackState: PlaybackState = {
   deviceId: null,
 };
 
-declare global {
-  interface Window {
-    Spotify: any;
-    onSpotifyWebPlaybackSDKReady: () => void;
-  }
-}
-
-let player: any = null;
+let player: Spotify.Player | null = null;
 
 export function initSpotifyPlayer(
   getToken: () => Promise<string>,
@@ -39,7 +32,7 @@ export function initSpotifyPlayer(
   onError: (msg: string) => void,
   onTrackEnd?: () => void
 ): Promise<void> {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     if (player) {
       resolve();
       return;
@@ -49,7 +42,9 @@ export function initSpotifyPlayer(
       player = new window.Spotify.Player({
         name: 'PlayMyJam Venue Player',
         getOAuthToken: (cb: (token: string) => void) => {
-          getToken().then(cb).catch(() => onError('Token fetch failed'));
+          getToken()
+            .then(cb)
+            .catch(() => onError('Token fetch failed'));
         },
         volume: 0.8,
       });
@@ -63,18 +58,13 @@ export function initSpotifyPlayer(
 
       let lastTrackId: string | null = null;
 
-      player.addListener('player_state_changed', (state: any) => {
+      player.addListener('player_state_changed', (state: Spotify.PlaybackState) => {
         if (!state) return;
         const track = state.track_window?.current_track;
         const currentTrackId = track?.id ?? null;
 
         // Track ended: paused at position 0 and we had a previous track playing
-        if (
-          state.paused &&
-          state.position === 0 &&
-          lastTrackId !== null &&
-          lastTrackId !== currentTrackId
-        ) {
+        if (state.paused && state.position === 0 && lastTrackId !== null && lastTrackId !== currentTrackId) {
           onTrackEnd?.();
         }
 
@@ -91,8 +81,8 @@ export function initSpotifyPlayer(
         });
       });
 
-      player.addListener('initialization_error', ({ message }: any) => onError(message));
-      player.addListener('authentication_error', ({ message }: any) => onError(message));
+      player.addListener('initialization_error', ({ message }: Spotify.Error) => onError(message));
+      player.addListener('authentication_error', ({ message }: Spotify.Error) => onError(message));
       player.addListener('account_error', () => onError('Spotify Premium required for playback'));
 
       player.connect();

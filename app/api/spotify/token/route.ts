@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getVenueToken } from '@/lib/spotify-auth';
+
 import { isAdminAuthed } from '@/lib/admin-auth';
+import { getVenueToken } from '@/lib/spotify-auth';
 
 export async function GET() {
   if (!(await isAdminAuthed())) {

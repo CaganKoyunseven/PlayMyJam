@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { getClientCredentialsToken } from '@/lib/spotify-auth';
 
 export async function GET(req: NextRequest) {
@@ -18,10 +19,11 @@ export async function GET(req: NextRequest) {
     }
 
     const data = await res.json();
-    const tracks = (data?.tracks?.items ?? []).map((t: any) => ({
+    type RawTrack = { id: string; name: string; artists: { name: string }[]; album: { name: string; images: { url: string }[] }; duration_ms: number };
+    const tracks = (data?.tracks?.items ?? []).map((t: RawTrack) => ({
       spotifyTrackId: t.id,
       title: t.name,
-      artist: t.artists.map((a: any) => a.name).join(', '),
+      artist: t.artists.map(a => a.name).join(', '),
       album: t.album?.name ?? '',
       albumArt: t.album?.images?.[0]?.url ?? null,
       durationMs: t.duration_ms ?? 0,

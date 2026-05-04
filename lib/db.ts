@@ -1,6 +1,6 @@
-import { supabase } from './supabase';
 import { DEFAULT_VENUE_ID } from './constants';
 import { publish, EventType } from './event-bus';
+import { supabase } from './supabase';
 
 export type QueueEntry = {
   id: string;
@@ -25,13 +25,9 @@ export type UserProfile = {
 };
 
 export async function getQueueEntries(): Promise<QueueEntry[]> {
-  const { data } = await supabase
-    .from('queue_entries')
-    .select('*')
-    .eq('venue_id', DEFAULT_VENUE_ID)
-    .order('requested_at', { ascending: true });
+  const { data } = await supabase.from('queue_entries').select('*').eq('venue_id', DEFAULT_VENUE_ID).order('requested_at', { ascending: true });
 
-  return (data ?? []).map((row) => ({
+  return (data ?? []).map(row => ({
     id: row.spotify_track_id,
     title: row.track_title,
     artist: row.track_artist,
@@ -80,7 +76,7 @@ export async function getQueueItems(): Promise<QueueItem[]> {
     .eq('venue_id', DEFAULT_VENUE_ID)
     .order('position', { ascending: true });
 
-  return (data ?? []).map((row) => ({
+  return (data ?? []).map(row => ({
     id: row.id,
     songId: row.song_id,
     position: row.position,
@@ -100,9 +96,7 @@ export async function insertQueueItem(songId: string, position?: number): Promis
     position: pos,
     is_playing: false,
   });
-  publish(EventType.SONG_ADDED_TO_QUEUE, { songId }).catch(
-    (err) => console.error('[db] publish SONG_ADDED_TO_QUEUE failed:', err)
-  );
+  publish(EventType.SONG_ADDED_TO_QUEUE, { songId }).catch(err => console.error('[db] publish SONG_ADDED_TO_QUEUE failed:', err));
 }
 
 export async function updateQueueItemPosition(id: string, position: number): Promise<void> {
@@ -116,8 +110,8 @@ export async function removeQueueItem(id: string): Promise<void> {
 export async function setNowPlaying(id: string, spotifyTrackUri?: string, deviceId?: string): Promise<void> {
   await supabase.from('queue_items').update({ is_playing: false }).eq('venue_id', DEFAULT_VENUE_ID);
   await supabase.from('queue_items').update({ is_playing: true }).eq('id', id);
-  publish(EventType.SONG_STARTED, { queueItemId: id, spotifyTrackUri: spotifyTrackUri ?? '', deviceId: deviceId ?? '' }).catch(
-    (err) => console.error('[db] publish SONG_STARTED failed:', err)
+  publish(EventType.SONG_STARTED, { queueItemId: id, spotifyTrackUri: spotifyTrackUri ?? '', deviceId: deviceId ?? '' }).catch(err =>
+    console.error('[db] publish SONG_STARTED failed:', err)
   );
 }
 
@@ -141,36 +135,39 @@ export async function getPendingRequests(): Promise<SongRequest[]> {
     .eq('status', 'pending')
     .order('requested_at', { ascending: true });
 
-  return (data ?? []).map((row: any) => ({
-    id: row.id,
-    songId: row.song_id,
-    title: row.songs?.title ?? '',
-    artist: row.songs?.artist ?? '',
-    albumArt: row.songs?.album_art ?? '',
-    sessionId: row.session_id ?? null,
-    requestedAt: row.requested_at,
-  }));
+  type RequestRow = {
+    id: string;
+    song_id: string;
+    session_id: string | null;
+    requested_at: string;
+    songs: { title: string; artist: string; album_art: string } | { title: string; artist: string; album_art: string }[] | null;
+  };
+  return (data ?? []).map((row: RequestRow) => {
+    const songs = Array.isArray(row.songs) ? row.songs[0] : row.songs;
+    return {
+      id: row.id,
+      songId: row.song_id,
+      title: songs?.title ?? '',
+      artist: songs?.artist ?? '',
+      albumArt: songs?.album_art ?? '',
+      sessionId: row.session_id ?? null,
+      requestedAt: row.requested_at,
+    };
+  });
 }
 
 // Admin approves an out-of-playlist request:
 // adds the song to all venue playlists + publishes SONG_ADDED_TO_LIBRARY
 export async function approveRequest(requestId: string, songId: string, sessionId: string | null): Promise<void> {
   // Get song info for notification payload
-  const { data: song } = await supabase
-    .from('songs')
-    .select('title, artist')
-    .eq('id', songId)
-    .single();
+  const { data: song } = await supabase.from('songs').select('title, artist').eq('id', songId).single();
 
   // Add song to all venue playlists so it shows up in browse
-  const { data: playlists } = await supabase
-    .from('playlists')
-    .select('id')
-    .eq('venue_id', DEFAULT_VENUE_ID);
+  const { data: playlists } = await supabase.from('playlists').select('id').eq('venue_id', DEFAULT_VENUE_ID);
 
   if (playlists && playlists.length > 0) {
     await supabase.from('playlist_songs').upsert(
-      playlists.map((pl) => ({ playlist_id: pl.id, song_id: songId, position: 99999 })),
+      playlists.map(pl => ({ playlist_id: pl.id, song_id: songId, position: 99999 })),
       { onConflict: 'playlist_id,song_id' }
     );
   }
@@ -182,15 +179,12 @@ export async function approveRequest(requestId: string, songId: string, sessionI
     title: song?.title ?? '',
     artist: song?.artist ?? '',
     requestedBySessionId: sessionId,
-  }).catch((err) => console.error('[db] publish SONG_ADDED_TO_LIBRARY failed:', err));
+  }).catch(err => console.error('[db] publish SONG_ADDED_TO_LIBRARY failed:', err));
 }
-
 
 export async function rejectRequest(requestId: string): Promise<void> {
   await supabase.from('song_requests').update({ status: 'rejected' }).eq('id', requestId);
-  publish(EventType.SONG_REJECTED, { requestId }).catch(
-    (err) => console.error('[db] publish SONG_REJECTED failed:', err)
-  );
+  publish(EventType.SONG_REJECTED, { requestId }).catch(err => console.error('[db] publish SONG_REJECTED failed:', err));
 }
 
 // Used by /request page: out-of-playlist song request (free, no token)
@@ -214,11 +208,7 @@ export async function createSongRequest(
   if (songErr) return { ok: false, reason: songErr.message };
 
   // Get song id
-  const { data: songRow } = await supabase
-    .from('songs')
-    .select('id')
-    .eq('spotify_track_id', track.spotifyTrackId)
-    .single();
+  const { data: songRow } = await supabase.from('songs').select('id').eq('spotify_track_id', track.spotifyTrackId).single();
 
   if (!songRow) return { ok: false, reason: 'Song upsert failed' };
 
@@ -246,9 +236,7 @@ export async function createSongRequest(
     return { ok: false, reason: insertErr.message };
   }
 
-  publish(EventType.SONG_REQUESTED, { songId: songRow.id, sessionId }).catch(
-    (err) => console.error('[db] publish SONG_REQUESTED failed:', err)
-  );
+  publish(EventType.SONG_REQUESTED, { songId: songRow.id, sessionId }).catch(err => console.error('[db] publish SONG_REQUESTED failed:', err));
 
   return { ok: true };
 }
@@ -267,11 +255,7 @@ export async function insertSongRequest(songId: string, sessionId: string): Prom
 // ── Token Balances ────────────────────────────────────────────
 
 export async function getOrCreateTokenBalance(sessionId: string): Promise<number> {
-  const { data } = await supabase
-    .from('token_balances')
-    .select('balance')
-    .eq('session_id', sessionId)
-    .single();
+  const { data } = await supabase.from('token_balances').select('balance').eq('session_id', sessionId).single();
 
   if (data) return data.balance;
 
@@ -280,11 +264,7 @@ export async function getOrCreateTokenBalance(sessionId: string): Promise<number
 }
 
 export async function deductToken(sessionId: string): Promise<{ ok: boolean; balance: number }> {
-  const { data: current } = await supabase
-    .from('token_balances')
-    .select('balance')
-    .eq('session_id', sessionId)
-    .maybeSingle();
+  const { data: current } = await supabase.from('token_balances').select('balance').eq('session_id', sessionId).maybeSingle();
 
   const balance = current?.balance ?? 0;
   if (balance < 1) return { ok: false, balance };
@@ -303,9 +283,7 @@ export async function deductToken(sessionId: string): Promise<{ ok: boolean; bal
   }
 
   const newBalance = updated[0].balance as number;
-  publish(EventType.TOKEN_SPENT, { sessionId, amount: 1, newBalance }).catch(
-    (err) => console.error('[db] publish TOKEN_SPENT failed:', err)
-  );
+  publish(EventType.TOKEN_SPENT, { sessionId, amount: 1, newBalance }).catch(err => console.error('[db] publish TOKEN_SPENT failed:', err));
 
   return { ok: true, balance: newBalance };
 }
@@ -321,13 +299,9 @@ export type PlaylistRow = {
 };
 
 export async function getVenueImportedPlaylists(): Promise<PlaylistRow[]> {
-  const { data } = await supabase
-    .from('playlists')
-    .select('*')
-    .eq('venue_id', DEFAULT_VENUE_ID)
-    .order('imported_at', { ascending: false });
+  const { data } = await supabase.from('playlists').select('*').eq('venue_id', DEFAULT_VENUE_ID).order('imported_at', { ascending: false });
 
-  return (data ?? []).map((p) => ({
+  return (data ?? []).map(p => ({
     id: p.id,
     spotifyPlaylistId: p.spotify_playlist_id,
     name: p.name,
@@ -343,23 +317,28 @@ export async function getPlaylistSongs(playlistId: string): Promise<QueueItem[]>
     .eq('playlist_id', playlistId)
     .order('position', { ascending: true });
 
-  return (data ?? []).map((row: any) => ({
-    id: row.songs.id,
-    songId: row.songs.id,
-    position: row.position,
-    isPlaying: false,
-    title: row.songs.title,
-    artist: row.songs.artist,
-    albumArt: row.songs.album_art ?? '',
-    durationMs: row.songs.duration_ms ?? 0,
-  }));
+  type SongJoin = { id: string; title: string; artist: string; album_art: string | null; duration_ms: number };
+  type PlaylistSongRow = { position: number; songs: SongJoin | SongJoin[] };
+  return (data ?? []).map((row: PlaylistSongRow) => {
+    const song = Array.isArray(row.songs) ? row.songs[0] : row.songs;
+    return {
+      id: song.id,
+      songId: song.id,
+      position: row.position,
+      isPlaying: false as const,
+      title: song.title,
+      artist: song.artist,
+      albumArt: song.album_art ?? '',
+      durationMs: song.duration_ms ?? 0,
+    };
+  });
 }
 
 // Auto-advance queue when current song finishes
 export async function advanceQueue(): Promise<void> {
   const items = await getQueueItems();
-  const playing = items.find((i) => i.isPlaying);
-  const upNext = items.filter((i) => !i.isPlaying).sort((a, b) => a.position - b.position)[0];
+  const playing = items.find(i => i.isPlaying);
+  const upNext = items.filter(i => !i.isPlaying).sort((a, b) => a.position - b.position)[0];
 
   if (playing) {
     await removeQueueItem(playing.id);
@@ -367,13 +346,11 @@ export async function advanceQueue(): Promise<void> {
 
   if (upNext) {
     await setNowPlaying(upNext.id);
-    publish(EventType.SONG_FINISHED, { finishedId: playing?.id ?? null, nextId: upNext.id }).catch(
-      (err) => console.error('[db] publish SONG_FINISHED failed:', err)
+    publish(EventType.SONG_FINISHED, { finishedId: playing?.id ?? null, nextId: upNext.id }).catch(err =>
+      console.error('[db] publish SONG_FINISHED failed:', err)
     );
   } else {
-    publish(EventType.SONG_FINISHED, { finishedId: playing?.id ?? null, nextId: null }).catch(
-      (err) => console.error('[db] publish SONG_FINISHED failed:', err)
-    );
+    publish(EventType.SONG_FINISHED, { finishedId: playing?.id ?? null, nextId: null }).catch(err => console.error('[db] publish SONG_FINISHED failed:', err));
   }
 }
 

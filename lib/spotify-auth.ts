@@ -1,5 +1,5 @@
-import { supabase } from './supabase';
 import { DEFAULT_VENUE_ID } from './constants';
+import { supabase } from './supabase';
 
 const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID!;
 const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET!;
@@ -76,24 +76,14 @@ export async function exchangeCodeForTokens(code: string): Promise<{
 }
 
 export async function refreshVenueToken(venueId: string): Promise<string> {
-  const { data: venue } = await supabase
-    .from('venues')
-    .select('spotify_refresh_token, spotify_token_expires_at')
-    .eq('id', venueId)
-    .single();
+  const { data: venue } = await supabase.from('venues').select('spotify_refresh_token, spotify_token_expires_at').eq('id', venueId).single();
 
   if (!venue?.spotify_refresh_token) throw new Error('No refresh token for venue');
 
-  const expiresAt = venue.spotify_token_expires_at
-    ? new Date(venue.spotify_token_expires_at).getTime()
-    : 0;
+  const expiresAt = venue.spotify_token_expires_at ? new Date(venue.spotify_token_expires_at).getTime() : 0;
 
   if (Date.now() < expiresAt - 60_000) {
-    const { data } = await supabase
-      .from('venues')
-      .select('spotify_access_token')
-      .eq('id', venueId)
-      .single();
+    const { data } = await supabase.from('venues').select('spotify_access_token').eq('id', venueId).single();
     return data!.spotify_access_token;
   }
 

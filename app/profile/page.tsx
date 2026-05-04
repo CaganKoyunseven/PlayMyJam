@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
 import BottomNav from '@/components/bottom-nav';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
+import { supabase } from '@/lib/supabase';
 
 type UsernameStatus = 'idle' | 'checking' | 'available' | 'taken' | 'too-short' | 'unchanged';
 
@@ -55,7 +57,10 @@ export default function ProfilePage() {
       setUsernameStatus(username === savedUsername ? 'unchanged' : 'idle');
       return;
     }
-    if (username.length < 3) { setUsernameStatus('too-short'); return; }
+    if (username.length < 3) {
+      setUsernameStatus('too-short');
+      return;
+    }
 
     setUsernameStatus('checking');
     debounceRef.current = setTimeout(async () => {
@@ -64,17 +69,16 @@ export default function ProfilePage() {
       setUsernameStatus(data.available ? 'available' : 'taken');
     }, 400);
 
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
   }, [username, savedUsername]);
 
   async function handleSaveUsername() {
     if (usernameStatus !== 'available') return;
     setSavingUsername(true);
     setUsernameError('');
-    const { error } = await supabase
-      .from('profiles')
-      .update({ username })
-      .eq('id', user!.id);
+    const { error } = await supabase.from('profiles').update({ username }).eq('id', user!.id);
     if (error) {
       setUsernameError(error.message);
     } else {
@@ -132,7 +136,7 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="bg-background-dark flex min-h-screen items-center justify-center">
-        <span className="material-symbols-outlined text-white/20 text-5xl animate-spin">refresh</span>
+        <span className="material-symbols-outlined animate-spin text-5xl text-white/20">refresh</span>
       </div>
     );
   }
@@ -140,16 +144,17 @@ export default function ProfilePage() {
   if (!user) return null;
 
   const usernameHint =
-    usernameStatus === 'too-short' ? 'At least 3 characters required' :
-    usernameStatus === 'checking' ? 'Checking...' :
-    usernameStatus === 'available' ? '✓ Available' :
-    usernameStatus === 'taken' ? '✗ Username already taken' :
-    '';
+    usernameStatus === 'too-short'
+      ? 'At least 3 characters required'
+      : usernameStatus === 'checking'
+        ? 'Checking...'
+        : usernameStatus === 'available'
+          ? '✓ Available'
+          : usernameStatus === 'taken'
+            ? '✗ Username already taken'
+            : '';
 
-  const usernameHintColor =
-    usernameStatus === 'available' ? 'text-green-400' :
-    usernameStatus === 'taken' ? 'text-red-400' :
-    'text-white/40';
+  const usernameHintColor = usernameStatus === 'available' ? 'text-green-400' : usernameStatus === 'taken' ? 'text-red-400' : 'text-white/40';
 
   return (
     <div className="bg-background-dark relative mx-auto flex min-h-screen w-full max-w-md flex-col">
@@ -166,100 +171,98 @@ export default function ProfilePage() {
       <div className="flex-1 overflow-y-auto pb-28">
         {/* Avatar */}
         <div className="flex flex-col items-center gap-3 px-6 pt-6 pb-4">
-          <div className="border-primary/40 size-24 rounded-full border-4 bg-surface-dark flex items-center justify-center shadow-lg">
-            <span className="material-symbols-outlined text-white/30 text-4xl">person</span>
+          <div className="border-primary/40 bg-surface-dark flex size-24 items-center justify-center rounded-full border-4 shadow-lg">
+            <span className="material-symbols-outlined text-4xl text-white/30">person</span>
           </div>
           <div className="text-center">
             <h1 className="text-2xl font-extrabold">{savedUsername}</h1>
-            <p className="text-white/30 text-xs mt-0.5">{user.email}</p>
+            <p className="mt-0.5 text-xs text-white/30">{user.email}</p>
           </div>
         </div>
 
         {/* Username */}
-        <div className="bg-surface-dark mx-4 mb-4 rounded-xl border border-white/5 p-4 flex flex-col gap-3">
-          <p className="text-xs font-bold uppercase tracking-wider text-white/40">Username</p>
-          <div className="flex gap-2 items-center">
-            <div className="relative flex-1 group">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/40 group-focus-within:text-primary transition-colors text-[18px]">
+        <div className="bg-surface-dark mx-4 mb-4 flex flex-col gap-3 rounded-xl border border-white/5 p-4">
+          <p className="text-xs font-bold tracking-wider text-white/40 uppercase">Username</p>
+          <div className="flex items-center gap-2">
+            <div className="group relative flex-1">
+              <span className="material-symbols-outlined group-focus-within:text-primary absolute top-1/2 left-3 -translate-y-1/2 text-[18px] text-white/40 transition-colors">
                 alternate_email
               </span>
               <input
                 type="text"
                 value={username}
-                onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                className="w-full rounded-xl bg-background-dark text-white h-11 pl-10 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                onChange={e => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                className="bg-background-dark focus:ring-primary/50 h-11 w-full rounded-xl pr-3 pl-10 text-sm text-white focus:ring-2 focus:outline-none"
               />
             </div>
             <button
               onClick={handleSaveUsername}
               disabled={usernameStatus !== 'available' || savingUsername}
-              className="h-11 px-4 rounded-xl bg-primary text-white text-sm font-bold transition-all active:scale-95 disabled:opacity-40"
+              className="bg-primary h-11 rounded-xl px-4 text-sm font-bold text-white transition-all active:scale-95 disabled:opacity-40"
             >
-              {savingUsername ? (
-                <span className="material-symbols-outlined animate-spin text-[18px]">refresh</span>
-              ) : 'Save'}
+              {savingUsername ? <span className="material-symbols-outlined animate-spin text-[18px]">refresh</span> : 'Save'}
             </button>
           </div>
-          {usernameHint && (
-            <span className={`text-xs ${usernameHintColor}`}>{usernameHint}</span>
-          )}
+          {usernameHint && <span className={`text-xs ${usernameHintColor}`}>{usernameHint}</span>}
           {usernameError && <span className="text-xs text-red-400">{usernameError}</span>}
         </div>
 
         {/* Change Password */}
-        <div className="bg-surface-dark mx-4 mb-4 rounded-xl border border-white/5 p-4 flex flex-col gap-3">
-          <p className="text-xs font-bold uppercase tracking-wider text-white/40">Change Password</p>
-          <form onSubmit={handleChangePassword} className="flex flex-col gap-3">
-            <div className="flex justify-between items-center">
+        <div className="bg-surface-dark mx-4 mb-4 flex flex-col gap-3 rounded-xl border border-white/5 p-4">
+          <p className="text-xs font-bold tracking-wider text-white/40 uppercase">Change Password</p>
+          <form
+            onSubmit={handleChangePassword}
+            className="flex flex-col gap-3"
+          >
+            <div className="flex items-center justify-between">
               <span className="text-sm font-semibold">Show passwords</span>
               <button
                 type="button"
-                onClick={() => setShowPasswords((v) => !v)}
-                className="text-white/40 hover:text-primary transition-colors"
+                onClick={() => setShowPasswords(v => !v)}
+                className="hover:text-primary text-white/40 transition-colors"
               >
-                <span className="material-symbols-outlined text-[20px]">
-                  {showPasswords ? 'visibility_off' : 'visibility'}
-                </span>
+                <span className="material-symbols-outlined text-[20px]">{showPasswords ? 'visibility_off' : 'visibility'}</span>
               </button>
             </div>
             <input
               type={showPasswords ? 'text' : 'password'}
               placeholder="Current password"
               value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
+              onChange={e => setCurrentPassword(e.target.value)}
               required
-              className="w-full rounded-xl bg-background-dark text-white h-11 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-white/30"
+              className="bg-background-dark focus:ring-primary/50 h-11 w-full rounded-xl px-4 text-sm text-white placeholder:text-white/30 focus:ring-2 focus:outline-none"
             />
             <input
               type={showPasswords ? 'text' : 'password'}
               placeholder="New password (min 8 chars)"
               value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
+              onChange={e => setNewPassword(e.target.value)}
               required
-              className="w-full rounded-xl bg-background-dark text-white h-11 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-white/30"
+              className="bg-background-dark focus:ring-primary/50 h-11 w-full rounded-xl px-4 text-sm text-white placeholder:text-white/30 focus:ring-2 focus:outline-none"
             />
             <input
               type={showPasswords ? 'text' : 'password'}
               placeholder="Confirm new password"
               value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              onChange={e => setConfirmPassword(e.target.value)}
               required
-              className="w-full rounded-xl bg-background-dark text-white h-11 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-white/30"
+              className="bg-background-dark focus:ring-primary/50 h-11 w-full rounded-xl px-4 text-sm text-white placeholder:text-white/30 focus:ring-2 focus:outline-none"
             />
             {passwordError && <p className="text-xs text-red-400">{passwordError}</p>}
             {passwordSuccess && <p className="text-xs text-green-400">Password updated successfully!</p>}
-            <div className="flex justify-between items-center">
-              <Link href="/forgot-password" className="text-xs text-primary hover:underline">
+            <div className="flex items-center justify-between">
+              <Link
+                href="/forgot-password"
+                className="text-primary text-xs hover:underline"
+              >
                 Forgot Password?
               </Link>
               <button
                 type="submit"
                 disabled={changingPassword}
-                className="h-9 px-4 rounded-xl bg-primary text-white text-sm font-bold transition-all active:scale-95 disabled:opacity-40"
+                className="bg-primary h-9 rounded-xl px-4 text-sm font-bold text-white transition-all active:scale-95 disabled:opacity-40"
               >
-                {changingPassword ? (
-                  <span className="material-symbols-outlined animate-spin text-[18px]">refresh</span>
-                ) : 'Update'}
+                {changingPassword ? <span className="material-symbols-outlined animate-spin text-[18px]">refresh</span> : 'Update'}
               </button>
             </div>
           </form>
@@ -269,7 +272,7 @@ export default function ProfilePage() {
         <div className="mx-4 mb-4">
           <button
             onClick={handleSignOut}
-            className="w-full h-12 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 hover:bg-red-500/20"
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 text-sm font-bold text-red-400 transition-all hover:bg-red-500/20 active:scale-95"
           >
             <span className="material-symbols-outlined text-[18px]">logout</span>
             Sign Out

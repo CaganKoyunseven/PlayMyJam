@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server';
+
+import { DEFAULT_VENUE_ID } from '@/lib/constants';
 import { exchangeCodeForTokens } from '@/lib/spotify-auth';
 import { supabase } from '@/lib/supabase';
-import { DEFAULT_VENUE_ID } from '@/lib/constants';
 
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get('code');
