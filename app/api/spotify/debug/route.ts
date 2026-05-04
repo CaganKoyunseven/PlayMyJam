@@ -56,14 +56,39 @@ export async function GET() {
     }
   }
 
-  // 4. Try /me/playlists to list user's own playlists
+  // 4. Try /me/playlists and then access the first playlist via /playlists/{id}
   let myPlaylistsTest: string | null = null;
+  let ownPlaylistDirectTest: string | null = null;
+  let ownPlaylistTracksTest: string | null = null;
+  let ownPlaylistId: string | null = null;
+  let ownPlaylistName: string | null = null;
   if (venue.spotify_access_token) {
     try {
       const res = await fetch('https://api.spotify.com/v1/me/playlists?limit=1', {
         headers: { Authorization: `Bearer ${venue.spotify_access_token}` },
       });
-      myPlaylistsTest = `${res.status} ${res.ok ? 'OK' : await res.text().catch(() => '')}`;
+      if (res.ok) {
+        const data = await res.json();
+        myPlaylistsTest = `200 OK (${data.items?.length ?? 0} items)`;
+        if (data.items?.[0]) {
+          ownPlaylistId = data.items[0].id;
+          ownPlaylistName = data.items[0].name;
+
+          // Test: access own playlist via /playlists/{id}
+          const res2 = await fetch(`https://api.spotify.com/v1/playlists/${ownPlaylistId}?fields=id,name`, {
+            headers: { Authorization: `Bearer ${venue.spotify_access_token}` },
+          });
+          ownPlaylistDirectTest = `${res2.status} ${res2.ok ? 'OK' : await res2.text().catch(() => '')}`;
+
+          // Test: access own playlist tracks via /playlists/{id}/tracks
+          const res3 = await fetch(`https://api.spotify.com/v1/playlists/${ownPlaylistId}/tracks?limit=1`, {
+            headers: { Authorization: `Bearer ${venue.spotify_access_token}` },
+          });
+          ownPlaylistTracksTest = `${res3.status} ${res3.ok ? 'OK' : await res3.text().catch(() => '')}`;
+        }
+      } else {
+        myPlaylistsTest = `${res.status} ${await res.text().catch(() => '')}`;
+      }
     } catch (e) {
       myPlaylistsTest = (e as Error).message;
     }
@@ -78,5 +103,9 @@ export async function GET() {
     spotifyUserError: meError,
     publicPlaylistTest,
     myPlaylistsTest,
+    ownPlaylistId,
+    ownPlaylistName,
+    ownPlaylistDirectTest,
+    ownPlaylistTracksTest,
   });
 }
