@@ -9,8 +9,9 @@ export async function POST(req: NextRequest) {
   }
 
   const { playlistId } = await req.json();
-  if (!playlistId) {
-    return NextResponse.json({ error: 'Missing playlistId' }, { status: 400 });
+  // Spotify IDs are base-62 alphanumeric strings — reject anything else to prevent SSRF
+  if (!playlistId || !/^[a-zA-Z0-9]+$/.test(playlistId)) {
+    return NextResponse.json({ error: 'Invalid playlistId' }, { status: 400 });
   }
 
   try {
