@@ -22,9 +22,6 @@ export async function POST(req: NextRequest) {
     console.error('[spotify/import] error:', msg);
     console.error('[spotify/import] full error:', e);
     // Surface the error detail to the client for admin visibility
-    return NextResponse.json(
-      { error: msg, hint: 'If "Forbidden", try disconnecting and reconnecting Spotify from the Spotify tab.' },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: msg, hint: 'If "Forbidden", try disconnecting and reconnecting Spotify from the Spotify tab.' }, { status: 500 });
   }
 }

@@ -93,9 +93,7 @@ export default function AdminDashboard() {
   // ── Init ───────────────────────────────────────────────────
   useEffect(() => {
     initObservers();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadSpotifySetup();
 
     const reqChannel = supabase
@@ -145,7 +143,7 @@ export default function AdminDashboard() {
       });
       const data = await res.json();
       if (!res.ok) {
-        const errorMsg = data.hint ? `${data.error}\n💡 ${data.hint}` : data.error ?? 'Import failed';
+        const errorMsg = data.hint ? `${data.error}\n💡 ${data.hint}` : (data.error ?? 'Import failed');
         throw new Error(errorMsg);
       }
       setSpotifyToast(`Imported "${pl.name}" — ${data.imported} songs`);
@@ -473,7 +471,9 @@ export default function AdminDashboard() {
                       disabled={disconnecting}
                       className="flex h-11 items-center justify-center gap-2 rounded-xl border border-red-500/30 px-4 text-sm font-bold text-red-400 transition-all hover:bg-red-500/10 disabled:opacity-50"
                     >
-                      <span className={`material-symbols-outlined text-[18px] ${disconnecting ? 'animate-spin' : ''}`}>{disconnecting ? 'refresh' : 'link_off'}</span>
+                      <span className={`material-symbols-outlined text-[18px] ${disconnecting ? 'animate-spin' : ''}`}>
+                        {disconnecting ? 'refresh' : 'link_off'}
+                      </span>
                       Disconnect
                     </button>
                   </div>
