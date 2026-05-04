@@ -80,7 +80,7 @@ export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playl
   // blocks /playlists/{id}/tracks (403) but allows /playlists/{id} with embedded track data.
   const playlistData = await spotifyFetch(
     `/playlists/${spotifyPlaylistId}?fields=id,name,images,tracks(total,items(track(id,name,artists(name),album(name,images),duration_ms)))`,
-    true,
+    true
   );
 
   type RawTrackItem = {
