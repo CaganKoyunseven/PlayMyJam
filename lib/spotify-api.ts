@@ -76,26 +76,58 @@ export type SpotifyTrackItem = {
 };
 
 export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playlistId: string; imported: number }> {
-  // Single call to /playlists/{id} with tracks embedded — Spotify Development Mode
-  // blocks /playlists/{id}/tracks (403) but allows /playlists/{id} with embedded track data.
-  const playlistData = await spotifyFetch(
-    `/playlists/${spotifyPlaylistId}?fields=id,name,images,tracks(total,items(track(id,name,artists(name),album(name,images),duration_ms)))`,
-    true
-  );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let playlistData: any = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let rawItems: any[] = [];
 
-  type RawTrackItem = {
-    track: { id: string; name: string; artists: { name: string }[]; album: { name: string; images: { url: string }[] }; duration_ms: number };
-  };
-  const tracks: SpotifyTrackItem[] = (playlistData?.tracks?.items ?? [])
-    .filter((i: RawTrackItem) => i?.track?.id)
-    .map((i: RawTrackItem) => ({
+  // Approach 1: Venue token — full playlist response (embeds up to 100 tracks)
+  try {
+    playlistData = await spotifyFetch(`/playlists/${spotifyPlaylistId}`, true);
+    rawItems = playlistData?.tracks?.items ?? [];
+    console.log(`[importPlaylist] venue token: ${rawItems.length} raw items, total=${playlistData?.tracks?.total}`);
+  } catch (e) {
+    console.error('[importPlaylist] venue token failed:', (e as Error).message);
+  }
+
+  // Approach 2: Client Credentials — works for public playlists, no Dev Mode user restriction
+  if (rawItems.length === 0) {
+    try {
+      const ccData = await spotifyFetch(`/playlists/${spotifyPlaylistId}`, false);
+      if (!playlistData) playlistData = ccData;
+      rawItems = ccData?.tracks?.items ?? [];
+      console.log(`[importPlaylist] CC /playlists: ${rawItems.length} raw items`);
+    } catch (e) {
+      console.error('[importPlaylist] CC /playlists failed:', (e as Error).message);
+    }
+  }
+
+  // Approach 3: Client Credentials on /tracks endpoint specifically
+  if (rawItems.length === 0) {
+    try {
+      const tracksData = await spotifyFetch(`/playlists/${spotifyPlaylistId}/tracks?limit=100`, false);
+      rawItems = tracksData?.items ?? [];
+      console.log(`[importPlaylist] CC /tracks: ${rawItems.length} raw items`);
+    } catch (e) {
+      console.error('[importPlaylist] CC /tracks failed:', (e as Error).message);
+    }
+  }
+
+  // Extract valid music tracks (filter out podcasts, null entries, local files)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tracks: SpotifyTrackItem[] = rawItems
+    .filter((i: any) => i?.track?.id && i?.track?.name) // eslint-disable-line @typescript-eslint/no-explicit-any
+    .map((i: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
       spotifyTrackId: i.track.id,
       title: i.track.name,
-      artist: i.track.artists.map(a => a.name).join(', '),
+      artist: i.track.artists?.map((a: { name: string }) => a.name).join(', ') ?? 'Unknown',
       album: i.track.album?.name ?? '',
       albumArt: i.track.album?.images?.[0]?.url ?? null,
       durationMs: i.track.duration_ms ?? 0,
     }));
+
+  console.log(`[importPlaylist] extracted ${tracks.length} valid tracks from ${rawItems.length} raw items`);
+
   if (tracks.length === 0) {
     return { playlistId: '', imported: 0 };
   }
