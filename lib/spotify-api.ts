@@ -76,9 +76,11 @@ export type SpotifyTrackItem = {
 };
 
 export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playlistId: string; imported: number }> {
+  // Use Client Credentials (false) instead of venue token — Spotify Development Mode
+  // blocks /playlists/{id} with user tokens. Client Credentials works for public playlists.
   const [playlistData, tracksData] = await Promise.all([
-    spotifyFetch(`/playlists/${spotifyPlaylistId}?fields=id,name,images,tracks.total`, true),
-    spotifyFetch(`/playlists/${spotifyPlaylistId}/tracks?limit=50&fields=items(track(id,name,artists,album,duration_ms))`, true),
+    spotifyFetch(`/playlists/${spotifyPlaylistId}?fields=id,name,images,tracks.total`, false),
+    spotifyFetch(`/playlists/${spotifyPlaylistId}/tracks?limit=50&fields=items(track(id,name,artists,album,duration_ms))`, false),
   ]);
 
   type RawTrackItem = {
