@@ -76,17 +76,17 @@ export type SpotifyTrackItem = {
 };
 
 export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playlistId: string; imported: number }> {
-  // Use Client Credentials (false) instead of venue token — Spotify Development Mode
-  // blocks /playlists/{id} with user tokens. Client Credentials works for public playlists.
-  const [playlistData, tracksData] = await Promise.all([
-    spotifyFetch(`/playlists/${spotifyPlaylistId}?fields=id,name,images,tracks.total`, false),
-    spotifyFetch(`/playlists/${spotifyPlaylistId}/tracks?limit=50&fields=items(track(id,name,artists,album,duration_ms))`, false),
-  ]);
+  // Single call to /playlists/{id} with tracks embedded — Spotify Development Mode
+  // blocks /playlists/{id}/tracks (403) but allows /playlists/{id} with embedded track data.
+  const playlistData = await spotifyFetch(
+    `/playlists/${spotifyPlaylistId}?fields=id,name,images,tracks(total,items(track(id,name,artists(name),album(name,images),duration_ms)))`,
+    true
+  );
 
   type RawTrackItem = {
     track: { id: string; name: string; artists: { name: string }[]; album: { name: string; images: { url: string }[] }; duration_ms: number };
   };
-  const tracks: SpotifyTrackItem[] = (tracksData?.items ?? [])
+  const tracks: SpotifyTrackItem[] = (playlistData?.tracks?.items ?? [])
     .filter((i: RawTrackItem) => i?.track?.id)
     .map((i: RawTrackItem) => ({
       spotifyTrackId: i.track.id,
