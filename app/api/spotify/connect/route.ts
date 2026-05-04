@@ -1,7 +1,9 @@
 import { randomBytes } from 'crypto';
+
 import { NextResponse } from 'next/server';
-import { getSpotifyAuthUrl } from '@/lib/spotify-auth';
+
 import { isAdminAuthed } from '@/lib/admin-auth';
+import { getSpotifyAuthUrl } from '@/lib/spotify-auth';
 
 export async function GET() {
   if (!(await isAdminAuthed())) {

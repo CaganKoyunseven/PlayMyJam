@@ -2,7 +2,9 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+
 import type { User, Session } from '@supabase/supabase-js';
+
 import { supabase } from './supabase';
 
 type AuthContextValue = {
@@ -39,11 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  return (
-    <AuthContext.Provider value={{ user, session, loading }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ user, session, loading }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

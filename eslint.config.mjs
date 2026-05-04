@@ -2,6 +2,7 @@ import { defineConfig, globalIgnores } from 'eslint/config';
 import nextVitals from 'eslint-config-next/core-web-vitals';
 import nextTs from 'eslint-config-next/typescript';
 import prettier from 'eslint-config-prettier/flat';
+import importX from 'eslint-plugin-import-x';
 import eslintPluginPrettier from 'eslint-plugin-prettier';
 
 export default defineConfig([
@@ -12,6 +13,7 @@ export default defineConfig([
   {
     plugins: {
       prettier: eslintPluginPrettier,
+      'import-x': importX,
     },
     settings: {
       react: { version: '19' },
@@ -26,11 +28,9 @@ export default defineConfig([
       'prettier/prettier': 'error',
       'object-shorthand': 'error',
       quotes: ['error', 'single', { avoidEscape: true }],
-      'react/jsx-curly-brace-presence': [
-        'error',
-        { props: 'never', children: 'never' },
-      ],
-      'import/order': [
+      'react/jsx-curly-brace-presence': ['error', { props: 'never', children: 'never' }],
+      'import/order': 'off',
+      'import-x/order': [
         'error',
         {
           pathGroups: [
@@ -38,16 +38,7 @@ export default defineConfig([
             { pattern: 'next/*', group: 'external', position: 'before' },
             { pattern: '@/**', group: 'internal', position: 'after' },
           ],
-          groups: [
-            'builtin',
-            'external',
-            'type',
-            'object',
-            'internal',
-            'parent',
-            'sibling',
-            'index',
-          ],
+          groups: ['builtin', 'external', 'type', 'object', 'internal', 'parent', 'sibling', 'index'],
           pathGroupsExcludedImportTypes: ['react', 'next'],
           'newlines-between': 'always',
           alphabetize: { order: 'asc' },
