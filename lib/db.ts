@@ -140,17 +140,20 @@ export async function getPendingRequests(): Promise<SongRequest[]> {
     song_id: string;
     session_id: string | null;
     requested_at: string;
-    songs: { title: string; artist: string; album_art: string } | null;
+    songs: { title: string; artist: string; album_art: string } | { title: string; artist: string; album_art: string }[] | null;
   };
-  return (data ?? []).map((row: RequestRow) => ({
-    id: row.id,
-    songId: row.song_id,
-    title: row.songs?.title ?? '',
-    artist: row.songs?.artist ?? '',
-    albumArt: row.songs?.album_art ?? '',
-    sessionId: row.session_id ?? null,
-    requestedAt: row.requested_at,
-  }));
+  return (data ?? []).map((row: RequestRow) => {
+    const songs = Array.isArray(row.songs) ? row.songs[0] : row.songs;
+    return {
+      id: row.id,
+      songId: row.song_id,
+      title: songs?.title ?? '',
+      artist: songs?.artist ?? '',
+      albumArt: songs?.album_art ?? '',
+      sessionId: row.session_id ?? null,
+      requestedAt: row.requested_at,
+    };
+  });
 }
 
 // Admin approves an out-of-playlist request:
@@ -314,17 +317,21 @@ export async function getPlaylistSongs(playlistId: string): Promise<QueueItem[]>
     .eq('playlist_id', playlistId)
     .order('position', { ascending: true });
 
-  type PlaylistSongRow = { position: number; songs: { id: string; title: string; artist: string; album_art: string | null; duration_ms: number } };
-  return (data ?? []).map((row: PlaylistSongRow) => ({
-    id: row.songs.id,
-    songId: row.songs.id,
-    position: row.position,
-    isPlaying: false,
-    title: row.songs.title,
-    artist: row.songs.artist,
-    albumArt: row.songs.album_art ?? '',
-    durationMs: row.songs.duration_ms ?? 0,
-  }));
+  type SongJoin = { id: string; title: string; artist: string; album_art: string | null; duration_ms: number };
+  type PlaylistSongRow = { position: number; songs: SongJoin | SongJoin[] };
+  return (data ?? []).map((row: PlaylistSongRow) => {
+    const song = Array.isArray(row.songs) ? row.songs[0] : row.songs;
+    return {
+      id: song.id,
+      songId: song.id,
+      position: row.position,
+      isPlaying: false as const,
+      title: song.title,
+      artist: song.artist,
+      albumArt: song.album_art ?? '',
+      durationMs: song.duration_ms ?? 0,
+    };
+  });
 }
 
 // Auto-advance queue when current song finishes
