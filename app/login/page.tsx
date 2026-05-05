@@ -59,7 +59,12 @@ export default function LoginPage() {
     setMagicError('');
     setMagicLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOtp({ email: magicEmail });
+      const { error } = await supabase.auth.signInWithOtp({
+        email: magicEmail,
+        options: {
+          emailRedirectTo: `${window.location.origin}/api/auth/callback?next=/queue`,
+        },
+      });
       if (error) {
         setMagicError(error.message);
         return;

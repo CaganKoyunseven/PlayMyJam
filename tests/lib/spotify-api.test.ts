@@ -13,9 +13,6 @@ import {
   getCurrentlyPlaying,
   importPlaylist,
 } from '@/lib/spotify-api';
-import { supabase } from '@/lib/supabase';
-import { supabaseAdmin } from '@/lib/supabase-admin';
-
 vi.mock('@/lib/supabase', () => ({
   supabase: {
     from: vi.fn().mockReturnValue({
