@@ -1,4 +1,5 @@
-import { vi } from 'vitest';
+import { vi, beforeEach } from 'vitest';
 
-// Silence noisy console.error output in tests
-vi.spyOn(console, 'error').mockImplementation(() => {});
+beforeEach(() => {
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+});
