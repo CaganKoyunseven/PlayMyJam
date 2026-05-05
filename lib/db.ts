@@ -68,6 +68,7 @@ export type QueueItem = {
   artist: string;
   albumArt: string;
   durationMs: number;
+  isPriority: boolean;
 };
 
 export async function getQueueItems(): Promise<QueueItem[]> {
@@ -87,16 +88,42 @@ export async function getQueueItems(): Promise<QueueItem[]> {
     artist: row.songs?.artist ?? '',
     albumArt: row.songs?.album_art ?? '',
     durationMs: row.songs?.duration_ms ?? 0,
+    isPriority: row.is_priority ?? false,
   }));
 }
 
-export async function insertQueueItem(songId: string, position?: number): Promise<void> {
-  const pos = position ?? Math.floor(Date.now() / 1000);
+export async function insertQueueItem(songId: string, position?: number, priority: boolean = false): Promise<void> {
+  let pos = position;
+  if (!pos) {
+    const items = await getQueueItems();
+    if (priority) {
+      const playing = items.find(i => i.isPlaying);
+      if (playing) {
+        // Shift all upcoming items that come after playing
+        const after = items.filter(i => !i.isPlaying && i.position > playing.position);
+        for (const item of after) {
+          await supabase
+            .from('queue_items')
+            .update({ position: item.position + 1 })
+            .eq('id', item.id);
+        }
+        pos = playing.position + 1;
+      } else {
+        const minPos = items.length > 0 ? Math.min(...items.map(i => i.position)) : Math.floor(Date.now() / 1000);
+        pos = minPos - 1;
+      }
+    } else {
+      const maxPos = items.length > 0 ? Math.max(...items.map(i => i.position)) : Math.floor(Date.now() / 1000);
+      pos = maxPos + 1;
+    }
+  }
+
   const { error } = await supabase.from('queue_items').insert({
     venue_id: DEFAULT_VENUE_ID,
     song_id: songId,
     position: pos,
     is_playing: false,
+    is_priority: priority,
   });
   if (error) {
     console.error('[db] insertQueueItem failed:', error);
@@ -183,8 +210,8 @@ export async function approveRequest(requestId: string, songId: string, sessionI
 
   await supabase.from('song_requests').update({ status: 'accepted' }).eq('id', requestId);
 
-  // Add the approved request directly to the queue
-  await insertQueueItem(songId);
+  // Add the approved request directly to the queue with priority
+  await insertQueueItem(songId, undefined, true);
 
   // Jump-start the player if nothing is playing
   const items = await getQueueItems();
@@ -349,6 +376,7 @@ export async function getPlaylistSongs(playlistId: string): Promise<QueueItem[]>
       artist: song.artist,
       albumArt: song.album_art ?? '',
       durationMs: song.duration_ms ?? 0,
+      isPriority: false,
     };
   });
 }
@@ -363,36 +391,59 @@ export async function fillQueueFromPlaylist(): Promise<void> {
   const { data: venue } = await supabase.from('venues').select('active_playlist_id').eq('id', DEFAULT_VENUE_ID).single();
   if (!venue?.active_playlist_id) return;
 
-  const { data: pSongs } = await supabase.from('playlist_songs').select('song_id').eq('playlist_id', venue.active_playlist_id);
+  const { data: pSongs } = await supabase
+    .from('playlist_songs')
+    .select('song_id, position')
+    .eq('playlist_id', venue.active_playlist_id)
+    .order('position', { ascending: true });
   if (!pSongs || pSongs.length === 0) return;
 
   // Prevent duplicate songs in the queue
   const existingSongIds = new Set(items.map(i => i.songId));
   const availableSongs = pSongs.filter(s => !existingSongIds.has(s.song_id));
 
-  // If we ran out of unique songs, we can just use the full list to keep music playing
+  // If we ran out of unique songs, we can just use the full list to keep music playing (sequentially)
   const pool = availableSongs.length > 0 ? availableSongs : pSongs;
 
   const needed = 10 - upcomingCount;
+  let currentMaxPos = items.length > 0 ? Math.max(...items.map(i => i.position)) : Math.floor(Date.now() / 1000);
+
   for (let i = 0; i < needed; i++) {
-    const randomSong = pool[Math.floor(Math.random() * pool.length)];
-    // Provide a slightly incremented timestamp so positions are strictly ordered (in seconds)
-    await insertQueueItem(randomSong.song_id, Math.floor(Date.now() / 1000) + i);
-    existingSongIds.add(randomSong.song_id); // Prevent inserting the same song twice in this loop
+    const songToPick = pool[i % pool.length];
+    currentMaxPos++;
+    await insertQueueItem(songToPick.song_id, currentMaxPos);
+    existingSongIds.add(songToPick.song_id);
   }
 }
 
 // Auto-advance queue when current song finishes
 export async function advanceQueue(): Promise<void> {
+  console.log('[db] advanceQueue triggered');
   // Ensure we have upcoming songs before we try to advance
   await fillQueueFromPlaylist();
 
   const items = await getQueueItems();
   const playing = items.find(i => i.isPlaying);
-  const upNext = items.filter(i => !i.isPlaying).sort((a, b) => a.position - b.position)[0];
+  const upcoming = items.filter(i => !i.isPlaying).sort((a, b) => a.position - b.position);
+  const upNext = upcoming[0];
+
+  console.log('[db] advanceQueue state:', {
+    playing: playing?.title,
+    upNext: upNext?.title,
+    totalUpcoming: upcoming.length,
+  });
 
   if (playing) {
-    await removeQueueItem(playing.id);
+    // Instead of removing, move to the very end of the queue
+    const maxPos = items.length > 0 ? Math.max(...items.map(i => i.position)) : Math.floor(Date.now() / 1000);
+    await supabase
+      .from('queue_items')
+      .update({
+        is_playing: false,
+        started_at: null,
+        position: maxPos + 1,
+      })
+      .eq('id', playing.id);
   }
 
   if (upNext) {

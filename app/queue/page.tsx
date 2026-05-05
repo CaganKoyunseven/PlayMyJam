@@ -101,7 +101,10 @@ export default function QueuePage() {
             <span className="bg-primary/20 text-primary rounded px-2 py-1 text-xs font-semibold tracking-wider uppercase">LIVE</span>
           </div>
 
-          <VirtualPlayer nowPlaying={nowPlayingItem} />
+          <VirtualPlayer
+            nowPlaying={nowPlayingItem}
+            autoAdvance={true}
+          />
         </section>
 
         {/* Queue List */}
@@ -162,9 +165,22 @@ export default function QueuePage() {
                     </div>
                   </div>
 
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-base font-bold">{song.title}</p>
-                    <p className="truncate text-sm text-slate-400">{song.artist}</p>
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <div className="flex items-center gap-2">
+                      <h3 className="truncate text-sm font-semibold text-white">{song.title}</h3>
+                      {song.isPriority && (
+                        <span className="bg-primary/20 flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[8px] font-black tracking-tighter text-primary uppercase">
+                          <span
+                            className="material-symbols-outlined text-[10px]"
+                            style={{ fontVariationSettings: "'FILL' 1" }}
+                          >
+                            token
+                          </span>
+                          Request
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-0.5 truncate text-xs text-white/50">{song.artist}</p>
                   </div>
 
                   <div className="flex items-center gap-2 text-slate-400">

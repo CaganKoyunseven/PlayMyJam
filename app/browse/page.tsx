@@ -67,7 +67,7 @@ export default function BrowsePage() {
       return;
     }
     setTokenBalance(balance);
-    await insertQueueItem(song.songId);
+    await insertQueueItem(song.songId, undefined, true);
     setAddedIds(prev => new Set(prev).add(song.songId));
     showToast('Added to queue!');
     router.push('/queue');
