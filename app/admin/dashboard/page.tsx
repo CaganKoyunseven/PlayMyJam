@@ -17,6 +17,8 @@ import {
   setNowPlaying,
   updateQueueItemPosition,
   getVenueImportedPlaylists,
+  getActivePlaylistId,
+  removeImportedPlaylist,
   SongRequest,
   QueueItem,
   PlaylistRow,
@@ -54,6 +56,8 @@ export default function AdminDashboard() {
   const [spotifyError, setSpotifyError] = useState<string | null>(null);
   const [spotifyToast, setSpotifyToast] = useState<string | null>(null);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [activePlaylistId, setActivePlaylistId] = useState<string | null>(null);
+  const [removing, setRemoving] = useState<string | null>(null);
 
   // ── Queue loaders ──────────────────────────────────────────
   const load = useCallback(async () => {
@@ -82,9 +86,10 @@ export default function AdminDashboard() {
   }, []);
 
   const loadSpotifySetup = useCallback(async () => {
-    const [{ connected }, imported] = await Promise.all([checkSpotifyConnection(), getVenueImportedPlaylists()]);
+    const [{ connected }, imported, activePl] = await Promise.all([checkSpotifyConnection(), getVenueImportedPlaylists(), getActivePlaylistId()]);
     setSpotifyConnected(connected);
     setImportedPlaylists(imported);
+    setActivePlaylistId(activePl);
     if (connected) {
       const token = await getVenueToken().catch(() => null);
       if (token) fetchSpotifyPlaylists();
@@ -149,11 +154,29 @@ export default function AdminDashboard() {
       }
       setSpotifyToast(`Imported "${pl.name}" — ${data.imported} songs`);
       setTimeout(() => setSpotifyToast(null), 3000);
-      setImportedPlaylists(await getVenueImportedPlaylists());
+      const [refreshed, activePl] = await Promise.all([getVenueImportedPlaylists(), getActivePlaylistId()]);
+      setImportedPlaylists(refreshed);
+      setActivePlaylistId(activePl);
     } catch (e) {
       setSpotifyError((e as Error).message);
     }
     setImporting(null);
+  }
+
+  async function handleRemovePlaylist(pl: PlaylistRow) {
+    setRemoving(pl.id);
+    setSpotifyError(null);
+    try {
+      await removeImportedPlaylist(pl.id);
+      setSpotifyToast(`Removed "${pl.name}"`);
+      setTimeout(() => setSpotifyToast(null), 3000);
+      const [refreshed, activePl] = await Promise.all([getVenueImportedPlaylists(), getActivePlaylistId()]);
+      setImportedPlaylists(refreshed);
+      setActivePlaylistId(activePl);
+    } catch (e) {
+      setSpotifyError((e as Error).message);
+    }
+    setRemoving(null);
   }
 
   // ── Queue handlers ─────────────────────────────────────────
@@ -501,28 +524,28 @@ export default function AdminDashboard() {
             </div>
 
             {/* Active playlist banner */}
-            {importedPlaylists.length > 0 &&
-              (() => {
-                const active = importedPlaylists[0];
-                return (
-                  <div className="rounded-2xl border border-[#1DB954]/30 bg-[#1DB954]/10 p-4">
-                    <div className="mb-2 flex items-center gap-2">
-                      <span className="material-symbols-outlined text-[16px] text-[#1DB954]">radio</span>
-                      <p className="text-xs font-bold tracking-wider text-[#1DB954] uppercase">Active Playlist</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="size-14 shrink-0 rounded-xl bg-white/10 bg-cover bg-center"
-                        style={active.imageUrl ? { backgroundImage: `url('${active.imageUrl}')` } : {}}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-base font-bold">{active.name}</p>
-                        <p className="text-xs text-slate-300">{active.trackCount} songs · available in Browse</p>
-                      </div>
+            {(() => {
+              const active = importedPlaylists.find(p => p.id === activePlaylistId);
+              if (!active) return null;
+              return (
+                <div className="rounded-2xl border border-[#1DB954]/30 bg-[#1DB954]/10 p-4">
+                  <div className="mb-2 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[16px] text-[#1DB954]">radio</span>
+                    <p className="text-xs font-bold tracking-wider text-[#1DB954] uppercase">Active Playlist</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="size-14 shrink-0 rounded-xl bg-white/10 bg-cover bg-center"
+                      style={active.imageUrl ? { backgroundImage: `url('${active.imageUrl}')` } : {}}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-base font-bold">{active.name}</p>
+                      <p className="text-xs text-slate-300">{active.trackCount} songs · available in Browse</p>
                     </div>
                   </div>
-                );
-              })()}
+                </div>
+              );
+            })()}
 
             {/* Spotify playlists to import */}
             {spotifyPlaylists.length > 0 && (
@@ -531,7 +554,7 @@ export default function AdminDashboard() {
                 <div className="flex flex-col gap-2">
                   {spotifyPlaylists.map(pl => {
                     const importedEntry = importedPlaylists.find(ip => ip.spotifyPlaylistId === pl.id);
-                    const isActive = importedPlaylists[0]?.spotifyPlaylistId === pl.id;
+                    const isActive = importedEntry?.id === activePlaylistId;
                     return (
                       <div
                         key={pl.id}
@@ -549,22 +572,20 @@ export default function AdminDashboard() {
                           <p className="text-xs text-slate-400">{pl.trackCount} songs</p>
                         </div>
                         <button
-                          onClick={() => !importedEntry && handleImport(pl)}
-                          disabled={importing === pl.id || !!importedEntry}
-                          className={`flex h-8 shrink-0 items-center gap-1 rounded-full px-3 text-xs font-bold transition-all active:scale-95 ${
-                            importedEntry ? 'bg-green-500/20 text-green-400' : 'text-white'
-                          }`}
-                          style={!importedEntry ? { background: 'linear-gradient(135deg, #f20da6, #9333ea)' } : {}}
+                          onClick={() => handleImport(pl)}
+                          disabled={importing === pl.id}
+                          className="flex h-8 shrink-0 items-center gap-1 rounded-full px-3 text-xs font-bold text-white transition-all active:scale-95"
+                          style={{ background: isActive ? '#1DB954' : 'linear-gradient(135deg, #f20da6, #9333ea)' }}
                         >
                           {importing === pl.id ? (
                             <span className="material-symbols-outlined animate-spin text-[14px]">refresh</span>
-                          ) : importedEntry ? (
+                          ) : isActive ? (
                             <>
-                              <span className="material-symbols-outlined text-[14px]">check</span> Imported
+                              <span className="material-symbols-outlined text-[14px]">check</span> Active
                             </>
                           ) : (
                             <>
-                              <span className="material-symbols-outlined text-[14px]">download</span> Import
+                              <span className="material-symbols-outlined text-[14px]">download</span> {importedEntry ? 'Re-import' : 'Import'}
                             </>
                           )}
                         </button>
@@ -580,26 +601,43 @@ export default function AdminDashboard() {
               <div>
                 <h3 className="mb-3 text-sm font-bold tracking-wider text-slate-400 uppercase">Imported Playlists</h3>
                 <div className="flex flex-col gap-2">
-                  {importedPlaylists.map((pl, idx) => (
-                    <div
-                      key={pl.id}
-                      className={`bg-surface-dark flex items-center gap-3 rounded-xl border p-3 ${idx === 0 ? 'border-[#1DB954]/30' : 'border-white/5'}`}
-                    >
+                  {importedPlaylists.map(pl => {
+                    const isActive = pl.id === activePlaylistId;
+                    return (
                       <div
-                        className="size-12 shrink-0 rounded-lg bg-white/5 bg-cover bg-center"
-                        style={pl.imageUrl ? { backgroundImage: `url('${pl.imageUrl}')` } : {}}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold">{pl.name}</p>
-                        <p className="text-xs text-slate-400">{pl.trackCount} songs</p>
+                        key={pl.id}
+                        className={`bg-surface-dark flex items-center gap-3 rounded-xl border p-3 ${isActive ? 'border-[#1DB954]/30' : 'border-white/5'}`}
+                      >
+                        <div
+                          className="size-12 shrink-0 rounded-lg bg-white/5 bg-cover bg-center"
+                          style={pl.imageUrl ? { backgroundImage: `url('${pl.imageUrl}')` } : {}}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold">{pl.name}</p>
+                          <p className="text-xs text-slate-400">{pl.trackCount} songs</p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          {isActive ? (
+                            <span className="material-symbols-outlined text-[20px] text-[#1DB954]">radio</span>
+                          ) : (
+                            <span className="material-symbols-outlined text-[20px] text-white/20">radio_button_unchecked</span>
+                          )}
+                          <button
+                            onClick={() => handleRemovePlaylist(pl)}
+                            disabled={removing === pl.id}
+                            title="Remove import"
+                            className="flex size-8 items-center justify-center rounded-lg bg-white/5 text-white/40 transition-all hover:bg-red-500/10 hover:text-red-400 active:scale-95 disabled:opacity-50"
+                          >
+                            {removing === pl.id ? (
+                              <span className="material-symbols-outlined animate-spin text-[16px]">refresh</span>
+                            ) : (
+                              <span className="material-symbols-outlined text-[16px]">delete</span>
+                            )}
+                          </button>
+                        </div>
                       </div>
-                      {idx === 0 ? (
-                        <span className="material-symbols-outlined text-[20px] text-[#1DB954]">radio</span>
-                      ) : (
-                        <span className="material-symbols-outlined text-[20px] text-green-400">check_circle</span>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}

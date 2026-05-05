@@ -39,10 +39,22 @@ export default function QueuePage() {
   const [nowPlayingItem, setNowPlayingItem] = useState<QueueItem | null>(null);
 
   useEffect(() => {
-    getQueueItems().then(items => {
-      setQueue(items.filter(i => !i.isPlaying));
-      setNowPlayingItem(items.find(i => i.isPlaying) ?? null);
+    getQueueItems().then(async items => {
+      const playing = items.find(i => i.isPlaying);
+      const upcoming = items.filter(i => !i.isPlaying);
+      setQueue(upcoming);
+      setNowPlayingItem(playing ?? null);
       setLoading(false);
+
+      // Auto-start playback if nothing is playing but queue has songs
+      if (!playing && upcoming.length > 0) {
+        const { advanceQueue } = await import('@/lib/db');
+        await advanceQueue();
+        // Refetch after advancing
+        const refreshed = await getQueueItems();
+        setQueue(refreshed.filter(i => !i.isPlaying));
+        setNowPlayingItem(refreshed.find(i => i.isPlaying) ?? null);
+      }
     });
 
     // Realtime subscription
