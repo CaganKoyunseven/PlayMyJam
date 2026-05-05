@@ -490,37 +490,65 @@ export default function AdminDashboard() {
               {spotifyError && <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-400">{spotifyError}</div>}
             </div>
 
+            {/* Active playlist banner */}
+            {importedPlaylists.length > 0 &&
+              (() => {
+                const active = importedPlaylists[0];
+                return (
+                  <div className="rounded-2xl border border-[#1DB954]/30 bg-[#1DB954]/10 p-4">
+                    <div className="mb-2 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[16px] text-[#1DB954]">radio</span>
+                      <p className="text-xs font-bold tracking-wider text-[#1DB954] uppercase">Active Playlist</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="size-14 shrink-0 rounded-xl bg-white/10 bg-cover bg-center"
+                        style={active.imageUrl ? { backgroundImage: `url('${active.imageUrl}')` } : {}}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-base font-bold">{active.name}</p>
+                        <p className="text-xs text-slate-300">{active.trackCount} songs · available in Browse</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
             {/* Spotify playlists to import */}
             {spotifyPlaylists.length > 0 && (
               <div>
                 <h3 className="mb-3 text-sm font-bold tracking-wider text-slate-400 uppercase">Your Spotify Playlists</h3>
                 <div className="flex flex-col gap-2">
                   {spotifyPlaylists.map(pl => {
-                    const alreadyImported = importedPlaylists.some(ip => ip.spotifyPlaylistId === pl.id);
+                    const importedEntry = importedPlaylists.find(ip => ip.spotifyPlaylistId === pl.id);
+                    const isActive = importedPlaylists[0]?.spotifyPlaylistId === pl.id;
                     return (
                       <div
                         key={pl.id}
-                        className="bg-surface-dark flex items-center gap-3 rounded-xl border border-white/5 p-3"
+                        className={`bg-surface-dark flex items-center gap-3 rounded-xl border p-3 ${isActive ? 'border-[#1DB954]/40' : 'border-white/5'}`}
                       >
                         <div
                           className="size-12 shrink-0 rounded-lg bg-white/5 bg-cover bg-center"
                           style={pl.imageUrl ? { backgroundImage: `url('${pl.imageUrl}')` } : {}}
                         />
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold">{pl.name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="truncate text-sm font-semibold">{pl.name}</p>
+                            {isActive && <span className="shrink-0 rounded-full bg-[#1DB954]/20 px-2 py-0.5 text-[10px] font-bold text-[#1DB954]">ACTIVE</span>}
+                          </div>
                           <p className="text-xs text-slate-400">{pl.trackCount} songs</p>
                         </div>
                         <button
-                          onClick={() => !alreadyImported && handleImport(pl)}
-                          disabled={importing === pl.id || alreadyImported}
+                          onClick={() => !importedEntry && handleImport(pl)}
+                          disabled={importing === pl.id || !!importedEntry}
                           className={`flex h-8 shrink-0 items-center gap-1 rounded-full px-3 text-xs font-bold transition-all active:scale-95 ${
-                            alreadyImported ? 'bg-green-500/20 text-green-400' : 'text-white'
+                            importedEntry ? 'bg-green-500/20 text-green-400' : 'text-white'
                           }`}
-                          style={!alreadyImported ? { background: 'linear-gradient(135deg, #f20da6, #9333ea)' } : {}}
+                          style={!importedEntry ? { background: 'linear-gradient(135deg, #f20da6, #9333ea)' } : {}}
                         >
                           {importing === pl.id ? (
                             <span className="material-symbols-outlined animate-spin text-[14px]">refresh</span>
-                          ) : alreadyImported ? (
+                          ) : importedEntry ? (
                             <>
                               <span className="material-symbols-outlined text-[14px]">check</span> Imported
                             </>
@@ -537,15 +565,15 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* Already imported playlists */}
+            {/* All imported playlists */}
             {importedPlaylists.length > 0 && (
               <div>
                 <h3 className="mb-3 text-sm font-bold tracking-wider text-slate-400 uppercase">Imported Playlists</h3>
                 <div className="flex flex-col gap-2">
-                  {importedPlaylists.map(pl => (
+                  {importedPlaylists.map((pl, idx) => (
                     <div
                       key={pl.id}
-                      className="bg-surface-dark flex items-center gap-3 rounded-xl border border-white/5 p-3"
+                      className={`bg-surface-dark flex items-center gap-3 rounded-xl border p-3 ${idx === 0 ? 'border-[#1DB954]/30' : 'border-white/5'}`}
                     >
                       <div
                         className="size-12 shrink-0 rounded-lg bg-white/5 bg-cover bg-center"
@@ -555,7 +583,11 @@ export default function AdminDashboard() {
                         <p className="truncate text-sm font-semibold">{pl.name}</p>
                         <p className="text-xs text-slate-400">{pl.trackCount} songs</p>
                       </div>
-                      <span className="material-symbols-outlined text-[20px] text-green-400">check_circle</span>
+                      {idx === 0 ? (
+                        <span className="material-symbols-outlined text-[20px] text-[#1DB954]">radio</span>
+                      ) : (
+                        <span className="material-symbols-outlined text-[20px] text-green-400">check_circle</span>
+                      )}
                     </div>
                   ))}
                 </div>

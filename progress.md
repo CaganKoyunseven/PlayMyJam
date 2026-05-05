@@ -307,7 +307,8 @@ c4bb713  feat: admin panel Spotify tab (connect + playlist import)
 - [x] `checkSpotifyConnection()` reads Supabase DB directly (not Client Credentials token) — client-side can't use server env vars
 - [x] Supabase RLS policies on `venues` table — anon key needs explicit policies, raw `GRANT` is ignored by PostgREST
 - [x] `/api/spotify/import` server route — browser can't use `SPOTIFY_CLIENT_SECRET` for token refresh; import now proxied through server
-- [x] **[FIXED]** Playlist import returns Spotify 403 "Forbidden" — scope mismatch on stored OAuth token. Fix: added disconnect/reconnect flow to admin panel. See "Known Spotify Issues" section above.
+- [x] **[DEMO WORKAROUND]** Spotify Dev Mode blocks `/tracks?ids=...` and `/playlists/{id}/tracks` (403/empty) — confirmed via `/api/spotify/debug`. Root cause: Spotify platform restriction on unreviewed apps, NOT a code bug (token is valid). `importPlaylist` falls through: API → `__NEXT_DATA__` HTML scrape → individual track page scraping → **mock data seed** so import always succeeds. Admin dashboard shows active playlist banner + ACTIVE badge. Real fix: apply for Spotify quota extension (production mode).
+- [x] Active playlist UI in admin Spotify tab — most recently imported playlist shown in green banner at top; ACTIVE badge on corresponding list item.
 
 ---
 
