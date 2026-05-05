@@ -53,7 +53,7 @@ export default function VirtualPlayer({ nowPlaying, autoAdvance = false, compact
 
     if (progressMs < nowPlaying.durationMs) return;
     if (advancingRef.current) return;
-    
+
     console.log('[VirtualPlayer] Triggering auto-advance for:', nowPlaying.title);
     advancingRef.current = true;
     advanceQueue().catch(err => {

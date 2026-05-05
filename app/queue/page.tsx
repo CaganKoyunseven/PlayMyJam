@@ -169,7 +169,7 @@ export default function QueuePage() {
                     <div className="flex items-center gap-2">
                       <h3 className="truncate text-sm font-semibold text-white">{song.title}</h3>
                       {song.isPriority && (
-                        <span className="bg-primary/20 flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[8px] font-black tracking-tighter text-primary uppercase">
+                        <span className="bg-primary/20 text-primary flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[8px] font-black tracking-tighter uppercase">
                           <span
                             className="material-symbols-outlined text-[10px]"
                             style={{ fontVariationSettings: "'FILL' 1" }}
