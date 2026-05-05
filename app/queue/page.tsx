@@ -89,9 +89,7 @@ export default function QueuePage() {
           <span className="material-symbols-outlined text-2xl">arrow_back</span>
         </button>
         <h1 className="text-lg font-bold">The Neon Lounge</h1>
-        <button className="flex size-10 items-center justify-center rounded-full text-white transition-colors hover:bg-white/10">
-          <span className="material-symbols-outlined text-2xl">settings</span>
-        </button>
+        <div className="size-10" /> {/* Spacer to keep title centered */}
       </header>
 
       <main className="flex flex-1 flex-col gap-6 px-4 pb-40">

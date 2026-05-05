@@ -110,20 +110,21 @@ export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playl
   }
 
   let tracks: SpotifyTrackItem[] = [];
-  // Step 1 & 2: Try real sources (API and Scrape) — wrap in try-catch to ensure fallback on error
+  // Step 1: Try real API
   try {
     console.log('[importPlaylist] Trying API path (venue token)...');
     tracks = await fetchAllTracksViaApi(spotifyPlaylistId);
     console.log(`[importPlaylist] API returned ${tracks.length} tracks`);
-
-    if (tracks.length === 0) {
-      console.log('[importPlaylist] API returned 0 — scraping public playlist page...');
-      tracks = await scrapePlaylistFull(spotifyPlaylistId);
-      console.log(`[importPlaylist] scrape returned ${tracks.length} tracks`);
-    }
   } catch (err) {
-    console.warn('[importPlaylist] Real sources failed with error, falling back to search hits. Error:', (err as Error).message);
-    tracks = []; // Ensure tracks is empty to trigger Step 3 fallback
+    console.warn('[importPlaylist] API failed with error:', (err as Error).message);
+    tracks = [];
+  }
+
+  // Step 2: Try scraping if API returned 0 or failed
+  if (tracks.length === 0) {
+    console.log('[importPlaylist] API returned 0 — scraping public playlist page...');
+    tracks = await scrapePlaylistFull(spotifyPlaylistId);
+    console.log(`[importPlaylist] scrape returned ${tracks.length} tracks`);
   }
 
   // Step 3 (demo fallback): if all real sources returned nothing, fetch random real hits from Spotify
