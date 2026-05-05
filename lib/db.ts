@@ -126,7 +126,17 @@ export async function insertQueueItem(songId: string, position?: number, priorit
     is_priority: priority,
   });
   if (error) {
-    console.error('[db] insertQueueItem failed:', error);
+    console.error('[db] insertQueueItem failed with priority column:', error);
+    // Fallback in case is_priority column hasn't been added to the database yet
+    const { error: fallbackError } = await supabase.from('queue_items').insert({
+      venue_id: DEFAULT_VENUE_ID,
+      song_id: songId,
+      position: pos,
+      is_playing: false,
+    });
+    if (fallbackError) {
+      console.error('[db] insertQueueItem fallback failed:', fallbackError);
+    }
   }
   publish(EventType.SONG_ADDED_TO_QUEUE, { songId }).catch(err => console.error('[db] publish SONG_ADDED_TO_QUEUE failed:', err));
 }
