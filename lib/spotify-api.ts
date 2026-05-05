@@ -85,9 +85,7 @@ async function fetchPlaylistTrackIds(spotifyPlaylistId: string): Promise<string[
   while (url) {
     try {
       // If it's a full URL (pagination next link), extract the path
-      const fetchPath = url.startsWith('http')
-        ? url.replace('https://api.spotify.com/v1', '')
-        : url;
+      const fetchPath = url.startsWith('http') ? url.replace('https://api.spotify.com/v1', '') : url;
 
       const data = await spotifyFetch(fetchPath, true);
 
@@ -128,16 +126,14 @@ export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playl
   // This is the CORRECT way — the /playlists/{id} response only includes the first page of tracks,
   // but /playlists/{id}/tracks properly paginates through ALL tracks.
   let trackIds: string[] = [];
-  console.log(`[importPlaylist] Trying dedicated /tracks endpoint with venue token...`);
+  console.log('[importPlaylist] Trying dedicated /tracks endpoint with venue token...');
   trackIds = await fetchPlaylistTrackIds(spotifyPlaylistId);
   console.log(`[importPlaylist] /tracks endpoint returned ${trackIds.length} track IDs`);
 
   // Step 3: If /tracks endpoint failed (Dev Mode 403), try extracting from inline playlist response
   if (trackIds.length === 0 && playlistData?.tracks?.items) {
     console.log('[importPlaylist] /tracks endpoint returned 0, trying inline tracks from playlist response...');
-    trackIds = playlistData.tracks.items
-      .map((item: { track?: { id: string } }) => item.track?.id)
-      .filter(Boolean);
+    trackIds = playlistData.tracks.items.map((item: { track?: { id: string } }) => item.track?.id).filter(Boolean);
     console.log(`[importPlaylist] found ${trackIds.length} track IDs from inline response`);
   }
 
