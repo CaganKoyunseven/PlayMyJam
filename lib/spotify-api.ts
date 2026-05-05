@@ -127,7 +127,7 @@ export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playl
     console.log('[importPlaylist] All sources failed — fetching real random hits from Spotify for demo');
     try {
       // Use Client Credentials token (false) which is allowed to search public catalog without 403 errors
-      const searchData = await spotifyFetch('/search?q=genre:pop&type=track&limit=30', false);
+      const searchData = await spotifyFetch('/search?q=top&type=track&limit=30', false);
       const searchTracks = searchData?.tracks?.items ?? [];
 
       if (searchTracks.length > 0) {
