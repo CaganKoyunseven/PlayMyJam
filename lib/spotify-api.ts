@@ -122,18 +122,43 @@ export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playl
     console.log(`[importPlaylist] scrape returned ${tracks.length} tracks`);
   }
 
-  // Step 3 (demo fallback): if all real sources returned nothing, seed mock data
+  // Step 3 (demo fallback): if all real sources returned nothing, fetch random real hits from Spotify
   if (tracks.length === 0) {
-    console.log('[importPlaylist] All sources failed — seeding mock data for demo');
-    tracks = browseSongs.map((s, i) => ({
-      // Deterministic 22-char pseudo-ID scoped to this playlist
-      spotifyTrackId: `DEMO${spotifyPlaylistId.slice(0, 8).padEnd(8, '0')}${String(i).padStart(10, '0')}`,
-      title: s.title,
-      artist: s.artist,
-      album: '',
-      albumArt: s.albumArt,
-      durationMs: 210000,
-    }));
+    console.log('[importPlaylist] All sources failed — fetching real random hits from Spotify for demo');
+    try {
+      // Use Client Credentials token (false) which is allowed to search public catalog without 403 errors
+      const searchData = await spotifyFetch('/search?q=genre:pop&type=track&limit=30', false);
+      const searchTracks = searchData?.tracks?.items ?? [];
+
+      if (searchTracks.length > 0) {
+        tracks = searchTracks.map(
+          (t: { id: string; name: string; artists: { name: string }[]; album: { name: string; images: { url: string }[] }; duration_ms: number }) => ({
+            spotifyTrackId: t.id,
+            title: t.name,
+            artist: t.artists?.map(a => a.name).join(', ') ?? 'Unknown Artist',
+            album: t.album?.name ?? '',
+            albumArt: t.album?.images?.[0]?.url ?? null,
+            durationMs: t.duration_ms ?? 210000,
+          })
+        );
+        console.log(`[importPlaylist] Search fallback returned ${tracks.length} real tracks with high quality art`);
+      }
+    } catch (e) {
+      console.error('[importPlaylist] Search fallback failed:', e);
+    }
+
+    // Ultimate fallback if search also fails somehow
+    if (tracks.length === 0) {
+      tracks = browseSongs.map((s, i) => ({
+        // Deterministic 22-char pseudo-ID scoped to this playlist
+        spotifyTrackId: `DEMO${spotifyPlaylistId.slice(0, 8).padEnd(8, '0')}${String(i).padStart(10, '0')}`,
+        title: s.title,
+        artist: s.artist,
+        album: '',
+        albumArt: s.albumArt,
+        durationMs: 210000,
+      }));
+    }
   }
 
   // Step 5: For any tracks still missing title/artist, fetch their individual pages
