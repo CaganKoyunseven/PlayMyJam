@@ -354,15 +354,18 @@ export type PlaylistRow = {
 };
 
 export async function getVenueImportedPlaylists(): Promise<PlaylistRow[]> {
+  const { data: venue } = await supabase.from('venues').select('active_playlist_id').eq('id', DEFAULT_VENUE_ID).single();
   const { data } = await supabase.from('playlists').select('*').eq('venue_id', DEFAULT_VENUE_ID).order('imported_at', { ascending: false });
 
-  return (data ?? []).map(p => ({
-    id: p.id,
-    spotifyPlaylistId: p.spotify_playlist_id,
-    name: p.name,
-    imageUrl: p.image_url,
-    trackCount: p.track_count,
-  }));
+  return (data ?? [])
+    .filter(p => p.id === venue?.active_playlist_id)
+    .map(p => ({
+      id: p.id,
+      spotifyPlaylistId: p.spotify_playlist_id,
+      name: p.name,
+      imageUrl: p.image_url,
+      trackCount: p.track_count,
+    }));
 }
 
 export async function getPlaylistSongs(playlistId: string): Promise<QueueItem[]> {
