@@ -63,6 +63,7 @@ export type QueueItem = {
   songId: string;
   position: number;
   isPlaying: boolean;
+  startedAt: string | null;
   title: string;
   artist: string;
   albumArt: string;
@@ -81,6 +82,7 @@ export async function getQueueItems(): Promise<QueueItem[]> {
     songId: row.song_id,
     position: row.position,
     isPlaying: row.is_playing,
+    startedAt: row.started_at ?? null,
     title: row.songs?.title ?? '',
     artist: row.songs?.artist ?? '',
     albumArt: row.songs?.album_art ?? '',
@@ -108,8 +110,8 @@ export async function removeQueueItem(id: string): Promise<void> {
 }
 
 export async function setNowPlaying(id: string, spotifyTrackUri?: string, deviceId?: string): Promise<void> {
-  await supabase.from('queue_items').update({ is_playing: false }).eq('venue_id', DEFAULT_VENUE_ID);
-  await supabase.from('queue_items').update({ is_playing: true }).eq('id', id);
+  await supabase.from('queue_items').update({ is_playing: false, started_at: null }).eq('venue_id', DEFAULT_VENUE_ID);
+  await supabase.from('queue_items').update({ is_playing: true, started_at: new Date().toISOString() }).eq('id', id);
   publish(EventType.SONG_STARTED, { queueItemId: id, spotifyTrackUri: spotifyTrackUri ?? '', deviceId: deviceId ?? '' }).catch(err =>
     console.error('[db] publish SONG_STARTED failed:', err)
   );
@@ -326,6 +328,7 @@ export async function getPlaylistSongs(playlistId: string): Promise<QueueItem[]>
       songId: song.id,
       position: row.position,
       isPlaying: false as const,
+      startedAt: null,
       title: song.title,
       artist: song.artist,
       albumArt: song.album_art ?? '',

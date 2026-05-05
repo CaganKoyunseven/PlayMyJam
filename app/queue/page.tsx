@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
 import BottomNav from '@/components/bottom-nav';
-import NowPlaying from '@/components/now-playing';
+import VirtualPlayer from '@/components/virtual-player';
 import { DEFAULT_VENUE_ID } from '@/lib/constants';
 import { getQueueItems, QueueItem } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
@@ -89,14 +89,7 @@ export default function QueuePage() {
             <span className="bg-primary/20 text-primary rounded px-2 py-1 text-xs font-semibold tracking-wider uppercase">LIVE</span>
           </div>
 
-          <NowPlaying playlistUri={nowPlayingItem ? undefined : undefined} />
-
-          {nowPlayingItem && (
-            <div className="mt-4 space-y-1 text-center">
-              <h3 className="text-xl font-bold">{nowPlayingItem.title}</h3>
-              <p className="text-slate-400">{nowPlayingItem.artist}</p>
-            </div>
-          )}
+          <VirtualPlayer nowPlaying={nowPlayingItem} />
         </section>
 
         {/* Queue List */}
