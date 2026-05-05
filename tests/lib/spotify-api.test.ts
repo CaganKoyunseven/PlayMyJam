@@ -13,32 +13,42 @@ import {
   getCurrentlyPlaying,
   importPlaylist,
 } from '@/lib/spotify-api';
-vi.mock('@/lib/supabase', () => ({
-  supabase: {
-    from: vi.fn().mockReturnValue({
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      in: vi.fn().mockReturnThis(),
-      upsert: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      order: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: { id: 'p1', spotify_access_token: 'mock-token' }, error: null }),
-    }),
-  },
-}));
+vi.mock('@/lib/supabase', () => {
+  const mockChain = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    in: vi.fn().mockReturnThis(),
+    upsert: vi.fn().mockReturnThis(),
+    update: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue({ data: { id: 'p1', spotify_access_token: 'mock-token', active_playlist_id: 'p1' }, error: null }),
+    maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+  };
+  return {
+    supabase: {
+      from: vi.fn().mockReturnValue(mockChain),
+    },
+  };
+});
 
-vi.mock('@/lib/supabase-admin', () => ({
-  supabaseAdmin: {
-    from: vi.fn().mockReturnValue({
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      in: vi.fn().mockReturnThis(),
-      upsert: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: { id: 'p1' }, error: null }),
-    }),
-  },
-}));
+vi.mock('@/lib/supabase-admin', () => {
+  const mockChain = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    in: vi.fn().mockReturnThis(),
+    upsert: vi.fn().mockReturnThis(),
+    update: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue({ data: { id: 'p1' }, error: null }),
+    maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+  };
+  return {
+    supabaseAdmin: {
+      from: vi.fn().mockReturnValue(mockChain),
+    },
+  };
+});
 
 vi.mock('@/lib/spotify-auth', () => ({
   getClientCredentialsToken: vi.fn().mockResolvedValue('cc-token'),
@@ -295,6 +305,16 @@ describe('Spotify API Fetch Wrappers', () => {
         return Promise.resolve({ ok: true, json: async () => ({}) });
       })
     );
+
+    const res = await importPlaylist('p1');
+    expect(res.imported).toBeGreaterThan(0);
+  });
+
+  it('importPlaylist falls back to search hits if API throws error', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
+      if (url.includes('/playlists/p1/tracks')) return Promise.reject(new Error('Forbidden'));
+      return Promise.resolve({ ok: true, json: async () => ({ items: [], next: null }) });
+    }));
 
     const res = await importPlaylist('p1');
     expect(res.imported).toBeGreaterThan(0);
