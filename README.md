@@ -132,6 +132,7 @@ docker run -p 3000:3000 \
 |------|------|
 | Cagan Koyunseven | Full-stack development |
 | Ozer Gokalp Sezer | Full-stack development |
+| Taner Yıldırım | Product & Business Lead|
 
 ---
 
