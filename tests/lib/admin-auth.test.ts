@@ -1,13 +1,14 @@
 // tests/lib/admin-auth.test.ts
+import { cookies } from 'next/headers';
+
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import { buildAdminToken, isAdminAuthed } from '@/lib/admin-auth';
 
 // Mock next/headers so cookies() works in Node
 vi.mock('next/headers', () => ({
   cookies: vi.fn(),
 }));
-
-import { cookies } from 'next/headers';
 
 describe('buildAdminToken', () => {
   it('returns a 64-char hex string', () => {

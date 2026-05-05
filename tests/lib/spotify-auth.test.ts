@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import { supabase } from '@/lib/supabase';
 
 // Set env before any import so module-level constants pick them up
@@ -61,10 +62,7 @@ describe('getClientCredentialsToken', () => {
     const token = await getClientCredentialsToken();
 
     expect(token).toBe('cc-token-123');
-    expect(mockFetch).toHaveBeenCalledWith(
-      'https://accounts.spotify.com/api/token',
-      expect.objectContaining({ method: 'POST' })
-    );
+    expect(mockFetch).toHaveBeenCalledWith('https://accounts.spotify.com/api/token', expect.objectContaining({ method: 'POST' }));
   });
 
   it('throws when Spotify returns non-ok status', async () => {
@@ -86,10 +84,13 @@ describe('exchangeCodeForTokens', () => {
 
   it('exchanges code for tokens via POST to Spotify', async () => {
     const mockTokens = { access_token: 'at', refresh_token: 'rt', expires_in: 3600 };
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => mockTokens,
-    }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => mockTokens,
+      })
+    );
 
     const { exchangeCodeForTokens } = await import('@/lib/spotify-auth');
     const result = await exchangeCodeForTokens('auth-code');
@@ -121,7 +122,8 @@ describe('refreshVenueToken and getVenueToken', () => {
       select: vi.fn().mockReturnThis(),
       update: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      single: vi.fn()
+      single: vi
+        .fn()
         .mockResolvedValueOnce({ data: { spotify_refresh_token: 'rt', spotify_token_expires_at: futureDate }, error: null })
         .mockResolvedValueOnce({ data: { spotify_access_token: 'valid-at' }, error: null }),
     } as never);
@@ -142,10 +144,13 @@ describe('refreshVenueToken and getVenueToken', () => {
       single: vi.fn().mockResolvedValue({ data: { spotify_refresh_token: 'rt', spotify_token_expires_at: pastDate }, error: null }),
     } as never);
 
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ access_token: 'new-at', expires_in: 3600 }),
-    }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ access_token: 'new-at', expires_in: 3600 }),
+      })
+    );
 
     const { refreshVenueToken } = await import('@/lib/spotify-auth');
     const token = await refreshVenueToken('venue-1');

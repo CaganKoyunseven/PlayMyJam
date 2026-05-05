@@ -1,6 +1,7 @@
 // tests/api/spotify/search.test.ts
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
+
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('@/lib/spotify-auth', () => ({
   getClientCredentialsToken: vi.fn().mockResolvedValue('mock-cc-token'),
@@ -9,9 +10,7 @@ vi.mock('@/lib/spotify-auth', () => ({
 import { GET } from '@/app/api/spotify/search/route';
 
 function makeRequest(q?: string) {
-  const url = q
-    ? `http://localhost/api/spotify/search?q=${encodeURIComponent(q)}`
-    : 'http://localhost/api/spotify/search';
+  const url = q ? `http://localhost/api/spotify/search?q=${encodeURIComponent(q)}` : 'http://localhost/api/spotify/search';
   return new NextRequest(url);
 }
 
@@ -48,10 +47,13 @@ describe('GET /api/spotify/search', () => {
   });
 
   it('returns mapped tracks from Spotify on success', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ tracks: { items: RAW_TRACKS } }),
-    }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ tracks: { items: RAW_TRACKS } }),
+      })
+    );
     const res = await GET(makeRequest('song one'));
     expect(res.status).toBe(200);
     const tracks = await res.json();
@@ -67,11 +69,14 @@ describe('GET /api/spotify/search', () => {
   });
 
   it('forwards Spotify error status when API returns non-ok', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: false,
-      status: 403,
-      json: async () => ({ error: { message: 'Forbidden' } }),
-    }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        json: async () => ({ error: { message: 'Forbidden' } }),
+      })
+    );
     const res = await GET(makeRequest('test'));
     expect(res.status).toBe(403);
   });

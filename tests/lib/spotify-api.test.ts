@@ -1,8 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { 
-  findTracksInObject, checkSpotifyConnection, getVenuePlaylists, 
-  searchTracks, startPlayback, playTrack, pausePlayback, 
-  resumePlayback, skipToNext, getCurrentlyPlaying, importPlaylist
+
+import {
+  findTracksInObject,
+  checkSpotifyConnection,
+  getVenuePlaylists,
+  searchTracks,
+  startPlayback,
+  playTrack,
+  pausePlayback,
+  resumePlayback,
+  skipToNext,
+  getCurrentlyPlaying,
+  importPlaylist,
 } from '@/lib/spotify-api';
 
 vi.mock('@/lib/supabase', () => ({
@@ -98,11 +107,14 @@ describe('findTracksInObject', () => {
 
 describe('Spotify API Fetch Wrappers', () => {
   beforeEach(() => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({ items: [] })
-    }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ items: [] }),
+      })
+    );
   });
 
   afterEach(() => {
@@ -115,22 +127,28 @@ describe('Spotify API Fetch Wrappers', () => {
   });
 
   it('getVenuePlaylists fetches playlists', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        items: [{ id: 'p1', name: 'Playlist 1', images: [{ url: 'img' }], tracks: { total: 10 } }]
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          items: [{ id: 'p1', name: 'Playlist 1', images: [{ url: 'img' }], tracks: { total: 10 } }],
+        }),
       })
-    }));
+    );
     const p = await getVenuePlaylists();
     expect(p).toHaveLength(1);
     expect(p[0].id).toBe('p1');
   });
 
   it('searchTracks calls API route', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ([{ spotifyTrackId: 't1' }])
-    }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => [{ spotifyTrackId: 't1' }],
+      })
+    );
     const res = await searchTracks('test');
     expect(res).toHaveLength(1);
   });
@@ -184,22 +202,27 @@ describe('Spotify API Fetch Wrappers', () => {
 
   it('importPlaylist uses API to fetch tracks', async () => {
     let callCount = 0;
-    vi.stubGlobal('fetch', vi.fn().mockImplementation((url) => {
-      callCount++;
-      if (callCount === 1) { // Meta
-        return Promise.resolve({ ok: true, json: async () => ({ name: 'P', images: [] }) });
-      }
-      if (callCount === 2) { // Tracks
-        return Promise.resolve({ 
-          ok: true, 
-          json: async () => ({ 
-            items: [{ track: { id: VALID_ID, name: 'T', artists: [{ name: 'A' }] } }],
-            next: null 
-          }) 
-        });
-      }
-      return Promise.resolve({ ok: true, json: async () => ({}) });
-    }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          // Meta
+          return Promise.resolve({ ok: true, json: async () => ({ name: 'P', images: [] }) });
+        }
+        if (callCount === 2) {
+          // Tracks
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              items: [{ track: { id: VALID_ID, name: 'T', artists: [{ name: 'A' }] } }],
+              next: null,
+            }),
+          });
+        }
+        return Promise.resolve({ ok: true, json: async () => ({}) });
+      })
+    );
 
     const res = await importPlaylist('p1');
     expect(res.imported).toBe(1);
@@ -208,22 +231,28 @@ describe('Spotify API Fetch Wrappers', () => {
 
   it('importPlaylist falls back to scraping if API returns 0 tracks', async () => {
     let callCount = 0;
-    vi.stubGlobal('fetch', vi.fn().mockImplementation((url) => {
-      callCount++;
-      if (callCount === 1) { // Meta
-        return Promise.resolve({ ok: true, json: async () => ({ name: 'P', images: [] }) });
-      }
-      if (callCount === 2) { // API tracks fails or 0
-        return Promise.resolve({ ok: true, json: async () => ({ items: [], next: null }) });
-      }
-      if (callCount === 3) { // Scrape page
-        return Promise.resolve({ 
-          ok: true, 
-          text: async () => `<script id="__NEXT_DATA__">${JSON.stringify({ playlist: { items: [{ track: makeTrack() }] } })}</script>` 
-        });
-      }
-      return Promise.resolve({ ok: true, json: async () => ({}) });
-    }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          // Meta
+          return Promise.resolve({ ok: true, json: async () => ({ name: 'P', images: [] }) });
+        }
+        if (callCount === 2) {
+          // API tracks fails or 0
+          return Promise.resolve({ ok: true, json: async () => ({ items: [], next: null }) });
+        }
+        if (callCount === 3) {
+          // Scrape page
+          return Promise.resolve({
+            ok: true,
+            text: async () => `<script id="__NEXT_DATA__">${JSON.stringify({ playlist: { items: [{ track: makeTrack() }] } })}</script>`,
+          });
+        }
+        return Promise.resolve({ ok: true, json: async () => ({}) });
+      })
+    );
 
     const res = await importPlaylist('p1');
     expect(res.imported).toBe(1);
@@ -231,19 +260,25 @@ describe('Spotify API Fetch Wrappers', () => {
 
   it('importPlaylist falls back to mock data if all sources fail', async () => {
     let callCount = 0;
-    vi.stubGlobal('fetch', vi.fn().mockImplementation((url) => {
-      callCount++;
-      if (callCount === 1) { // Meta
-        return Promise.resolve({ ok: true, json: async () => ({ name: 'P', images: [] }) });
-      }
-      if (callCount === 2) { // API tracks fails or 0
-        return Promise.resolve({ ok: true, json: async () => ({ items: [], next: null }) });
-      }
-      if (callCount === 3) { // Scrape page fails
-        return Promise.resolve({ ok: false, status: 404 });
-      }
-      return Promise.resolve({ ok: true, json: async () => ({}) });
-    }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          // Meta
+          return Promise.resolve({ ok: true, json: async () => ({ name: 'P', images: [] }) });
+        }
+        if (callCount === 2) {
+          // API tracks fails or 0
+          return Promise.resolve({ ok: true, json: async () => ({ items: [], next: null }) });
+        }
+        if (callCount === 3) {
+          // Scrape page fails
+          return Promise.resolve({ ok: false, status: 404 });
+        }
+        return Promise.resolve({ ok: true, json: async () => ({}) });
+      })
+    );
 
     const res = await importPlaylist('p1');
     expect(res.imported).toBeGreaterThan(0);
@@ -251,28 +286,35 @@ describe('Spotify API Fetch Wrappers', () => {
 
   it('importPlaylist fetches missing metadata', async () => {
     let callCount = 0;
-    vi.stubGlobal('fetch', vi.fn().mockImplementation((url) => {
-      callCount++;
-      if (callCount === 1) { // Meta
-        return Promise.resolve({ ok: true, json: async () => ({ name: 'P', images: [] }) });
-      }
-      if (callCount === 2) { // API tracks fails
-        return Promise.resolve({ ok: true, json: async () => ({ items: [], next: null }) });
-      }
-      if (callCount === 3) { // Scrape page gets IDs only
-        return Promise.resolve({ 
-          ok: true, 
-          text: async () => `<html><a href="/track/${VALID_ID}">Link</a></html>` 
-        });
-      }
-      if (callCount > 3) { // Individual track fetch
-        return Promise.resolve({
-          ok: true,
-          text: async () => `<title>Fetched Track - song by The Artist | Spotify</title>`
-        });
-      }
-      return Promise.resolve({ ok: true, json: async () => ({}) });
-    }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          // Meta
+          return Promise.resolve({ ok: true, json: async () => ({ name: 'P', images: [] }) });
+        }
+        if (callCount === 2) {
+          // API tracks fails
+          return Promise.resolve({ ok: true, json: async () => ({ items: [], next: null }) });
+        }
+        if (callCount === 3) {
+          // Scrape page gets IDs only
+          return Promise.resolve({
+            ok: true,
+            text: async () => `<html><a href="/track/${VALID_ID}">Link</a></html>`,
+          });
+        }
+        if (callCount > 3) {
+          // Individual track fetch
+          return Promise.resolve({
+            ok: true,
+            text: async () => '<title>Fetched Track - song by The Artist | Spotify</title>',
+          });
+        }
+        return Promise.resolve({ ok: true, json: async () => ({}) });
+      })
+    );
 
     const res = await importPlaylist('p1');
     expect(res.imported).toBe(1);

@@ -25,16 +25,29 @@ vi.mock('@/lib/event-bus', () => ({
   },
 }));
 
-import { supabase } from '@/lib/supabase';
-import { 
-  getQueueItems, removeQueueItem, insertQueueEntry, getQueueEntries,
-  insertQueueItem, updateQueueItemPosition, setNowPlaying,
-  getPendingRequests, approveRequest, rejectRequest, createSongRequest,
-  insertSongRequest, getOrCreateTokenBalance, deductToken,
-  getVenueImportedPlaylists, getPlaylistSongs, advanceQueue,
-  getSessionProfile, getUserProfile
+import {
+  getQueueItems,
+  removeQueueItem,
+  insertQueueEntry,
+  getQueueEntries,
+  insertQueueItem,
+  updateQueueItemPosition,
+  setNowPlaying,
+  getPendingRequests,
+  approveRequest,
+  rejectRequest,
+  createSongRequest,
+  insertSongRequest,
+  getOrCreateTokenBalance,
+  deductToken,
+  getVenueImportedPlaylists,
+  getPlaylistSongs,
+  advanceQueue,
+  getSessionProfile,
+  getUserProfile,
 } from '@/lib/db';
 import { publish } from '@/lib/event-bus';
+import { supabase } from '@/lib/supabase';
 
 function mockChain(resolvedValue: unknown) {
   const chain: Record<string, unknown> = {};
@@ -62,13 +75,15 @@ describe('DB Queue & Items', () => {
   });
 
   it('maps row fields to QueueItem shape', async () => {
-    const rows = [{
-      id: 'item-1',
-      song_id: 'song-1',
-      position: 0,
-      is_playing: false,
-      songs: { title: 'My Song', artist: 'Artist', album_art: 'http://art', duration_ms: 180000 },
-    }];
+    const rows = [
+      {
+        id: 'item-1',
+        song_id: 'song-1',
+        position: 0,
+        is_playing: false,
+        songs: { title: 'My Song', artist: 'Artist', album_art: 'http://art', duration_ms: 180000 },
+      },
+    ];
     vi.mocked(supabase.from).mockReturnValue(mockChain({ data: rows, error: null }) as never);
     const items = await getQueueItems();
     expect(items[0]).toMatchObject({ id: 'item-1', songId: 'song-1', title: 'My Song' });
@@ -124,10 +139,15 @@ describe('Song Requests', () => {
   });
 
   it('getPendingRequests returns mapped requests', async () => {
-    const rows = [{
-      id: 'req-1', song_id: 'song-1', session_id: 'sess-1', requested_at: '2023',
-      songs: { title: 'Song', artist: 'Artist', album_art: 'Art' }
-    }];
+    const rows = [
+      {
+        id: 'req-1',
+        song_id: 'song-1',
+        session_id: 'sess-1',
+        requested_at: '2023',
+        songs: { title: 'Song', artist: 'Artist', album_art: 'Art' },
+      },
+    ];
     vi.mocked(supabase.from).mockReturnValue(mockChain({ data: rows, error: null }) as never);
     const reqs = await getPendingRequests();
     expect(reqs[0].title).toBe('Song');
@@ -140,7 +160,7 @@ describe('Song Requests', () => {
       if (table === 'playlists') return mockChain({ data: [] }) as never;
       return mockFrom as never;
     });
-    
+
     await approveRequest('req-1', 'song-1', 'sess-1');
     expect(publish).toHaveBeenCalled();
   });
@@ -226,15 +246,15 @@ describe('Playlists', () => {
   it('advanceQueue works with playing song', async () => {
     const items = [
       { id: 'item-1', isPlaying: true, position: 1 },
-      { id: 'item-2', isPlaying: false, position: 2 }
+      { id: 'item-2', isPlaying: false, position: 2 },
     ];
     vi.mocked(supabase.from).mockImplementation((table: string) => {
       if (table === 'queue_items') {
         const chain = mockChain({ data: items });
         // Make delete work
-        (chain as any).delete = vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) });
+        (chain as { delete: ReturnType<typeof vi.fn> }).delete = vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) });
         // Make update work
-        (chain as any).update = vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) });
+        (chain as { update: ReturnType<typeof vi.fn> }).update = vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) });
         return chain as never;
       }
       return mockChain({}) as never;

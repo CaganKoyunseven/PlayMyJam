@@ -70,7 +70,7 @@ describe('subscribe and teardownEventBus', () => {
   it('triggers handlers when an event is received', () => {
     const handler = vi.fn();
     subscribe(EventType.SONG_REQUESTED, handler);
-    
+
     // Simulate realtime event
     insertCallback!({
       new: {
@@ -79,13 +79,15 @@ describe('subscribe and teardownEventBus', () => {
         venue_id: 'venue-1',
         payload: { songId: 's1' },
         created_at: 'now',
-      }
+      },
     });
 
-    expect(handler).toHaveBeenCalledWith(expect.objectContaining({
-      type: EventType.SONG_REQUESTED,
-      payload: { songId: 's1' }
-    }));
+    expect(handler).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: EventType.SONG_REQUESTED,
+        payload: { songId: 's1' },
+      })
+    );
   });
 
   it('unsubscribe removes the handler', () => {
