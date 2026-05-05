@@ -286,7 +286,7 @@ async function scrapePlaylistFull(playlistId: string): Promise<SpotifyTrackItem[
 // A track object is identified by having an `id` that is a 22-char
 // base-62 string, a `name` string, and an `artists` array.
 
-function findTracksInObject(node: unknown, maxDepth: number): SpotifyTrackItem[] {
+export function findTracksInObject(node: unknown, maxDepth: number): SpotifyTrackItem[] {
   const results: SpotifyTrackItem[] = [];
   const seen = new Set<string>();
 
