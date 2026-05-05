@@ -113,8 +113,12 @@ export async function removeQueueItem(id: string): Promise<void> {
 }
 
 export async function setNowPlaying(id: string, spotifyTrackUri?: string, deviceId?: string): Promise<void> {
-  await supabase.from('queue_items').update({ is_playing: false, started_at: null }).eq('venue_id', DEFAULT_VENUE_ID);
-  await supabase.from('queue_items').update({ is_playing: true, started_at: new Date().toISOString() }).eq('id', id);
+  const { error: e1 } = await supabase.from('queue_items').update({ is_playing: false, started_at: null }).eq('venue_id', DEFAULT_VENUE_ID);
+  if (e1) console.error('[db] setNowPlaying reset failed:', e1);
+
+  const { error: e2 } = await supabase.from('queue_items').update({ is_playing: true, started_at: new Date().toISOString() }).eq('id', id);
+  if (e2) console.error('[db] setNowPlaying set true failed:', e2);
+
   publish(EventType.SONG_STARTED, { queueItemId: id, spotifyTrackUri: spotifyTrackUri ?? '', deviceId: deviceId ?? '' }).catch(err =>
     console.error('[db] publish SONG_STARTED failed:', err)
   );
@@ -354,7 +358,7 @@ export async function fillQueueFromPlaylist(): Promise<void> {
   const items = await getQueueItems();
   const upcomingCount = items.filter(i => !i.isPlaying).length;
 
-  if (upcomingCount >= 3) return;
+  if (upcomingCount >= 5) return; // Target 5 upcoming songs
 
   const { data: venue } = await supabase.from('venues').select('active_playlist_id').eq('id', DEFAULT_VENUE_ID).single();
   if (!venue?.active_playlist_id) return;
@@ -362,11 +366,19 @@ export async function fillQueueFromPlaylist(): Promise<void> {
   const { data: pSongs } = await supabase.from('playlist_songs').select('song_id').eq('playlist_id', venue.active_playlist_id);
   if (!pSongs || pSongs.length === 0) return;
 
-  const needed = 3 - upcomingCount;
+  // Prevent duplicate songs in the queue
+  const existingSongIds = new Set(items.map(i => i.songId));
+  const availableSongs = pSongs.filter(s => !existingSongIds.has(s.song_id));
+
+  // If we ran out of unique songs, we can just use the full list to keep music playing
+  const pool = availableSongs.length > 0 ? availableSongs : pSongs;
+
+  const needed = 5 - upcomingCount;
   for (let i = 0; i < needed; i++) {
-    const randomSong = pSongs[Math.floor(Math.random() * pSongs.length)];
+    const randomSong = pool[Math.floor(Math.random() * pool.length)];
     // Provide a slightly incremented timestamp so positions are strictly ordered (in seconds)
     await insertQueueItem(randomSong.song_id, Math.floor(Date.now() / 1000) + i);
+    existingSongIds.add(randomSong.song_id); // Prevent inserting the same song twice in this loop
   }
 }
 
