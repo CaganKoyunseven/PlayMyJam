@@ -455,6 +455,7 @@ export async function advanceQueue(): Promise<void> {
         is_playing: false,
         started_at: null,
         position: maxPos + 1,
+        is_priority: false,
       })
       .eq('id', playing.id);
   }

@@ -183,9 +183,9 @@ export default function QueuePage() {
                             className="material-symbols-outlined text-[12px]"
                             style={{ fontVariationSettings: "'FILL' 1" }}
                           >
-                            stars
+                            token
                           </span>
-                          Top Request
+                          Added with Token
                         </span>
                       )}
                     </div>
