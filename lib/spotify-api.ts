@@ -75,121 +75,49 @@ export type SpotifyTrackItem = {
   durationMs: number;
 };
 
-// ── Fetch all track IDs from a playlist via the dedicated /tracks endpoint ──
-// This handles Spotify pagination (max 100 items per page).
-// Uses venue token since Dev Mode blocks CC tokens on this endpoint.
-async function fetchPlaylistTrackIds(spotifyPlaylistId: string): Promise<string[]> {
-  const allIds: string[] = [];
-  let url: string | null = `/playlists/${spotifyPlaylistId}/tracks?fields=items(track(id)),next,total&limit=100`;
-
-  while (url) {
-    try {
-      // If it's a full URL (pagination next link), extract the path
-      const fetchPath = url.startsWith('http') ? url.replace('https://api.spotify.com/v1', '') : url;
-
-      const data = await spotifyFetch(fetchPath, true);
-
-      if (data?.items) {
-        for (const item of data.items) {
-          if (item?.track?.id) {
-            allIds.push(item.track.id);
-          }
-        }
-      }
-
-      // Spotify returns a `next` URL for pagination, or null when done
-      url = data?.next ?? null;
-    } catch (e) {
-      console.error('[fetchPlaylistTrackIds] failed:', (e as Error).message);
-      break;
-    }
-  }
-
-  return allIds;
-}
-
 export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playlistId: string; imported: number }> {
-  // Step 1: Get playlist metadata from API (works in Dev Mode for allowlisted users)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let playlistData: any = null;
+  // Get playlist metadata (name, image) — works even in Dev Mode
+
+  let playlistMeta: { name?: string; images?: { url: string }[] } | null = null;
   try {
-    playlistData = await spotifyFetch(`/playlists/${spotifyPlaylistId}?fields=name,images,tracks.total`, true);
+    playlistMeta = await spotifyFetch(`/playlists/${spotifyPlaylistId}?fields=name,images`, true);
   } catch {
     try {
-      playlistData = await spotifyFetch(`/playlists/${spotifyPlaylistId}?fields=name,images,tracks.total`, false);
+      playlistMeta = await spotifyFetch(`/playlists/${spotifyPlaylistId}?fields=name,images`, false);
     } catch {
-      /* metadata will be null, that's ok */
+      /* ok, will default to 'Playlist' */
     }
   }
 
-  // Step 2: Fetch track IDs using the dedicated /tracks endpoint (paginated, venue token)
-  // This is the CORRECT way — the /playlists/{id} response only includes the first page of tracks,
-  // but /playlists/{id}/tracks properly paginates through ALL tracks.
-  let trackIds: string[] = [];
-  console.log('[importPlaylist] Trying dedicated /tracks endpoint with venue token...');
-  trackIds = await fetchPlaylistTrackIds(spotifyPlaylistId);
-  console.log(`[importPlaylist] /tracks endpoint returned ${trackIds.length} track IDs`);
+  // Step 1: Try full track list via Spotify API (venue token, paginated)
+  let tracks: SpotifyTrackItem[] = [];
+  console.log('[importPlaylist] Trying API path (venue token)...');
+  tracks = await fetchAllTracksViaApi(spotifyPlaylistId);
+  console.log(`[importPlaylist] API returned ${tracks.length} tracks`);
 
-  // Step 3: If /tracks endpoint failed (Dev Mode 403), try extracting from inline playlist response
-  if (trackIds.length === 0 && playlistData?.tracks?.items) {
-    console.log('[importPlaylist] /tracks endpoint returned 0, trying inline tracks from playlist response...');
-    trackIds = playlistData.tracks.items.map((item: { track?: { id: string } }) => item.track?.id).filter(Boolean);
-    console.log(`[importPlaylist] found ${trackIds.length} track IDs from inline response`);
+  // Step 2: API blocked (Dev Mode 403) — scrape the public playlist page instead
+  if (tracks.length === 0) {
+    console.log('[importPlaylist] API returned 0 — scraping public playlist page...');
+    tracks = await scrapePlaylistFull(spotifyPlaylistId);
+    console.log(`[importPlaylist] scrape returned ${tracks.length} tracks`);
   }
 
-  // Step 4: Fallback to scraping only if API returned 0 tracks
-  if (trackIds.length === 0) {
-    console.log('[importPlaylist] API returned 0 tracks, falling back to scraping...');
-    trackIds = await scrapePlaylistTrackIds(spotifyPlaylistId);
-    console.log(`[importPlaylist] scraped ${trackIds.length} track IDs from web page`);
-  }
-
-  if (trackIds.length === 0) {
+  if (tracks.length === 0) {
     return { playlistId: '', imported: 0 };
   }
 
-  // Step 5: Batch-fetch full track details via /tracks API (up to 50 per request)
-  // IMPORTANT: Use venue token (true) — Client Credentials gets 403 in Dev Mode!
-  const tracks: SpotifyTrackItem[] = [];
-  for (let i = 0; i < trackIds.length; i += 50) {
-    const batch = trackIds.slice(i, i + 50);
-    try {
-      const data = await spotifyFetch(`/tracks?ids=${batch.join(',')}`, true);
-      for (const t of data?.tracks ?? []) {
-        if (!t?.id) continue;
-        tracks.push({
-          spotifyTrackId: t.id,
-          title: t.name,
-          artist: t.artists?.map((a: { name: string }) => a.name).join(', ') ?? 'Unknown',
-          album: t.album?.name ?? '',
-          albumArt: t.album?.images?.[0]?.url ?? null,
-          durationMs: t.duration_ms ?? 0,
-        });
-      }
-    } catch (e) {
-      console.error(`[importPlaylist] /tracks batch ${i / 50 + 1} failed:`, (e as Error).message);
-      // Try with CC token as last resort for this batch
-      try {
-        console.log(`[importPlaylist] Retrying batch ${i / 50 + 1} with CC token...`);
-        const data = await spotifyFetch(`/tracks?ids=${batch.join(',')}`, false);
-        for (const t of data?.tracks ?? []) {
-          if (!t?.id) continue;
-          tracks.push({
-            spotifyTrackId: t.id,
-            title: t.name,
-            artist: t.artists?.map((a: { name: string }) => a.name).join(', ') ?? 'Unknown',
-            album: t.album?.name ?? '',
-            albumArt: t.album?.images?.[0]?.url ?? null,
-            durationMs: t.duration_ms ?? 0,
-          });
-        }
-      } catch (e2) {
-        console.error(`[importPlaylist] /tracks batch ${i / 50 + 1} CC fallback also failed:`, (e2 as Error).message);
-      }
-    }
+  // Step 3: For any tracks still missing title/artist, fetch their individual pages
+  const incomplete = tracks.filter(t => !t.title);
+  if (incomplete.length > 0) {
+    console.log(`[importPlaylist] ${incomplete.length} tracks missing metadata — fetching individual pages...`);
+    const filled = await scrapeIndividualTracksMeta(incomplete.map(t => t.spotifyTrackId));
+    const filledMap = new Map(filled.map(t => [t.spotifyTrackId, t]));
+    tracks = tracks.map(t => filledMap.get(t.spotifyTrackId) ?? t);
   }
 
-  console.log(`[importPlaylist] fetched ${tracks.length} full tracks from API`);
+  // Drop tracks with no title (couldn't get metadata from any source)
+  tracks = tracks.filter(t => t.title);
+  console.log(`[importPlaylist] ${tracks.length} tracks with complete metadata`);
 
   if (tracks.length === 0) {
     return { playlistId: '', imported: 0 };
@@ -226,8 +154,8 @@ export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playl
       {
         venue_id: DEFAULT_VENUE_ID,
         spotify_playlist_id: spotifyPlaylistId,
-        name: playlistData?.name ?? 'Playlist',
-        image_url: playlistData?.images?.[0]?.url ?? null,
+        name: playlistMeta?.name ?? 'Playlist',
+        image_url: playlistMeta?.images?.[0]?.url ?? null,
         track_count: tracks.length,
       },
       { onConflict: 'venue_id,spotify_playlist_id' }
@@ -258,36 +186,189 @@ export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playl
   return { playlistId, imported: tracks.length };
 }
 
-// ── Scrape track IDs from Spotify public playlist page ───────
-// Spotify Dev Mode blocks track data via API, but the public web page
-// at open.spotify.com/playlist/{id} lists all tracks with links.
-// We extract track IDs from those links.
+// ── API path: paginated fetch using venue token ───────────────
 
-async function scrapePlaylistTrackIds(playlistId: string): Promise<string[]> {
+async function fetchAllTracksViaApi(playlistId: string): Promise<SpotifyTrackItem[]> {
+  const tracks: SpotifyTrackItem[] = [];
+  let url: string | null = `/playlists/${playlistId}/tracks?fields=items(track(id,name,artists,album,duration_ms)),next&limit=100`;
+
+  while (url) {
+    try {
+      const fetchPath = url.startsWith('http') ? url.replace('https://api.spotify.com/v1', '') : url;
+      const data = await spotifyFetch(fetchPath, true);
+      for (const item of data?.items ?? []) {
+        const t = item?.track;
+        if (!t?.id) continue;
+        tracks.push({
+          spotifyTrackId: t.id,
+          title: t.name,
+          artist: (t.artists ?? []).map((a: { name: string }) => a.name).join(', '),
+          album: t.album?.name ?? '',
+          albumArt: t.album?.images?.[0]?.url ?? null,
+          durationMs: t.duration_ms ?? 0,
+        });
+      }
+      url = data?.next ?? null;
+    } catch {
+      break;
+    }
+  }
+
+  return tracks;
+}
+
+// ── Scrape public playlist page for full track metadata ───────
+// Spotify Dev Mode blocks the /tracks API, but the public page at
+// open.spotify.com/playlist/{id} includes __NEXT_DATA__ with all track info.
+
+async function scrapePlaylistFull(playlistId: string): Promise<SpotifyTrackItem[]> {
   try {
     const res = await fetch(`https://open.spotify.com/playlist/${playlistId}`, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; PlayMyJam/1.0)',
-        Accept: 'text/html',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml',
       },
     });
     if (!res.ok) {
-      console.error(`[scrapePlaylist] HTTP ${res.status} for playlist ${playlistId}`);
+      console.error(`[scrapePlaylistFull] HTTP ${res.status}`);
       return [];
     }
     const html = await res.text();
 
-    // Extract track IDs from links like /track/0MAAh257gKxFrJDzfJ4gHC
+    // Try to extract full track data from __NEXT_DATA__
+    const nextDataMatch = html.match(/<script[^>]+id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
+    if (nextDataMatch) {
+      try {
+        const nextData = JSON.parse(nextDataMatch[1]);
+        const found = findTracksInObject(nextData, 20);
+        if (found.length > 0) {
+          console.log(`[scrapePlaylistFull] extracted ${found.length} tracks from __NEXT_DATA__`);
+          return found;
+        }
+      } catch (e) {
+        console.error('[scrapePlaylistFull] __NEXT_DATA__ parse failed:', (e as Error).message);
+      }
+    }
+
+    // __NEXT_DATA__ had no track data — fall back to IDs only
     const trackIdPattern = /\/track\/([a-zA-Z0-9]{22})/g;
     const ids = new Set<string>();
-    let match;
-    while ((match = trackIdPattern.exec(html)) !== null) {
-      ids.add(match[1]);
-    }
-    return Array.from(ids);
+    let m;
+    while ((m = trackIdPattern.exec(html)) !== null) ids.add(m[1]);
+
+    console.log(`[scrapePlaylistFull] no metadata in HTML, got ${ids.size} IDs only`);
+    return Array.from(ids).map(id => ({
+      spotifyTrackId: id,
+      title: '',
+      artist: '',
+      album: '',
+      albumArt: null,
+      durationMs: 0,
+    }));
   } catch (e) {
-    console.error('[scrapePlaylist] failed:', (e as Error).message);
+    console.error('[scrapePlaylistFull] failed:', (e as Error).message);
     return [];
+  }
+}
+
+// ── Recursively search a JSON tree for Spotify track objects ─────
+// A track object is identified by having an `id` that is a 22-char
+// base-62 string, a `name` string, and an `artists` array.
+
+function findTracksInObject(node: unknown, maxDepth: number): SpotifyTrackItem[] {
+  const results: SpotifyTrackItem[] = [];
+  const seen = new Set<string>();
+
+  function walk(n: unknown, depth: number): void {
+    if (depth <= 0 || n === null || typeof n !== 'object') return;
+
+    if (Array.isArray(n)) {
+      for (const item of n) walk(item, depth - 1);
+      return;
+    }
+
+    const obj = n as Record<string, unknown>;
+
+    // Spotify track object signature: id (22 chars), name, artists array
+    if (typeof obj.id === 'string' && /^[a-zA-Z0-9]{22}$/.test(obj.id) && typeof obj.name === 'string' && Array.isArray(obj.artists) && !seen.has(obj.id)) {
+      seen.add(obj.id);
+      const album = obj.album as Record<string, unknown> | undefined;
+      results.push({
+        spotifyTrackId: obj.id,
+        title: obj.name,
+        artist: (obj.artists as { name: string }[]).map(a => a.name).join(', '),
+        album: typeof album?.name === 'string' ? album.name : '',
+        albumArt: Array.isArray(album?.images) && (album.images as { url: string }[]).length > 0 ? (album.images as { url: string }[])[0].url : null,
+        durationMs: typeof obj.duration_ms === 'number' ? obj.duration_ms : 0,
+      });
+      return; // don't recurse inside track objects
+    }
+
+    for (const value of Object.values(obj)) walk(value, depth - 1);
+  }
+
+  walk(node, maxDepth);
+  return results;
+}
+
+// ── Fallback: scrape individual track pages for metadata ──────
+// Used when scrapePlaylistFull couldn't extract metadata from HTML.
+// Fetches each track's og: meta tags in parallel batches.
+
+async function scrapeIndividualTracksMeta(trackIds: string[]): Promise<SpotifyTrackItem[]> {
+  const BATCH = 8;
+  const results: SpotifyTrackItem[] = [];
+
+  for (let i = 0; i < trackIds.length; i += BATCH) {
+    const batch = trackIds.slice(i, i + BATCH);
+    const settled = await Promise.allSettled(batch.map(id => scrapeOneTrackMeta(id)));
+    for (const r of settled) {
+      if (r.status === 'fulfilled' && r.value) results.push(r.value);
+    }
+  }
+
+  return results;
+}
+
+async function scrapeOneTrackMeta(id: string): Promise<SpotifyTrackItem | null> {
+  try {
+    const res = await fetch(`https://open.spotify.com/track/${id}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        Accept: 'text/html',
+      },
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+
+    // Try __NEXT_DATA__ first (most reliable)
+    const ndMatch = html.match(/<script[^>]+id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
+    if (ndMatch) {
+      try {
+        const tracks = findTracksInObject(JSON.parse(ndMatch[1]), 20);
+        const match = tracks.find(t => t.spotifyTrackId === id);
+        if (match) return match;
+      } catch {}
+    }
+
+    // Fall back to og: meta tags
+    // Title format: "Track Name - song by Artist | Spotify"
+    const titleM = html.match(/<title>([^<]+?)\s*[-–]\s*song(?:\s+and\s+lyrics)?\s+by\s+([^|<]+?)\s*\|\s*Spotify/i);
+    const imageM = html.match(/<meta\s+(?:property="og:image"|name="og:image")\s+content="([^"]+)"/);
+    if (titleM) {
+      return {
+        spotifyTrackId: id,
+        title: titleM[1].trim(),
+        artist: titleM[2].trim(),
+        album: '',
+        albumArt: imageM ? imageM[1] : null,
+        durationMs: 0,
+      };
+    }
+
+    return null;
+  } catch {
+    return null;
   }
 }
 
