@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { insertQueueItem, advanceQueue, getQueueItems } from '../../lib/db';
+
+import { insertQueueItem, advanceQueue } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
 
 // Helper to create a chainable mock
-const createMockChain = (data: any = null, error: any = null) => {
-  const chain: any = {
+const createMockChain = (data: unknown = null, error: unknown = null) => {
+  const chain: Record<string, unknown> = {
     select: vi.fn().mockReturnThis(),
     insert: vi.fn().mockReturnThis(),
     update: vi.fn().mockReturnThis(),
@@ -14,8 +15,8 @@ const createMockChain = (data: any = null, error: any = null) => {
     order: vi.fn().mockReturnThis(),
     single: vi.fn().mockReturnThis(),
     maybeSingle: vi.fn().mockReturnThis(),
-    then: (resolve: any) => resolve({ data, error }),
-    catch: (reject: any) => reject(error),
+    then: (resolve: (val: unknown) => void) => resolve({ data, error }),
+    catch: (reject: (err: unknown) => void) => reject(error),
   };
   return chain;
 };
@@ -34,8 +35,22 @@ describe('Playback Flow Integration', () => {
   it('should handle priority insertion and rotation correctly', async () => {
     // 1. Initial State: Song A is playing, Song B is up next
     const mockItems = [
-      { id: '1', song_id: 'A', position: 100, is_playing: true, is_priority: false, songs: { title: 'Song A', artist: 'Art', album_art: 'Art', duration_ms: 200000 } },
-      { id: '2', song_id: 'B', position: 101, is_playing: false, is_priority: false, songs: { title: 'Song B', artist: 'Art', album_art: 'Art', duration_ms: 200000 } },
+      {
+        id: '1',
+        song_id: 'A',
+        position: 100,
+        is_playing: true,
+        is_priority: false,
+        songs: { title: 'Song A', artist: 'Art', album_art: 'Art', duration_ms: 200000 },
+      },
+      {
+        id: '2',
+        song_id: 'B',
+        position: 101,
+        is_playing: false,
+        is_priority: false,
+        songs: { title: 'Song B', artist: 'Art', album_art: 'Art', duration_ms: 200000 },
+      },
     ];
 
     vi.mocked(supabase.from).mockImplementation((table: string) => {

@@ -311,10 +311,13 @@ describe('Spotify API Fetch Wrappers', () => {
   });
 
   it('importPlaylist falls back to search hits if API throws error', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
-      if (url.includes('/playlists/p1/tracks')) return Promise.reject(new Error('Forbidden'));
-      return Promise.resolve({ ok: true, json: async () => ({ items: [], next: null }) });
-    }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url: string) => {
+        if (url.includes('/playlists/p1/tracks')) return Promise.reject(new Error('Forbidden'));
+        return Promise.resolve({ ok: true, json: async () => ({ items: [], next: null }) });
+      })
+    );
 
     const res = await importPlaylist('p1');
     expect(res.imported).toBeGreaterThan(0);
