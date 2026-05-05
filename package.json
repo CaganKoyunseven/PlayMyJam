@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",
@@ -30,6 +33,7 @@
     "@types/spotify-web-playback-sdk": "^0.1.19",
     "@typescript-eslint/eslint-plugin": "^8.58.1",
     "@typescript-eslint/parser": "^8.58.1",
+    "@vitest/coverage-v8": "^4.1.5",
     "eslint": "^10.2.0",
     "eslint-config-next": "16.2.3",
     "eslint-config-prettier": "^10.1.8",
@@ -39,7 +43,8 @@
     "prettier": "^3.8.2",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.5"
   },
   "ignoreScripts": [
     "sharp",
