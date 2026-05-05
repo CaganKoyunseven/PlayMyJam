@@ -21,6 +21,7 @@ vi.mock('@/lib/supabase', () => ({
       in: vi.fn().mockReturnThis(),
       upsert: vi.fn().mockReturnThis(),
       update: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data: { id: 'p1', spotify_access_token: 'mock-token' }, error: null }),
     }),
   },
