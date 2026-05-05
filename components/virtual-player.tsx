@@ -45,8 +45,16 @@ export default function VirtualPlayer({ nowPlaying, autoAdvance = false, compact
   useEffect(() => {
     if (!autoAdvance || !nowPlaying || !startedAt) return;
     if (nowPlaying.durationMs <= 0) return;
+
+    // Debug logging for auto-advance (only when close to finishing)
+    if (progressMs > nowPlaying.durationMs - 2000) {
+      console.log('[VirtualPlayer] progress:', progressMs, '/', nowPlaying.durationMs, 'advancing:', advancingRef.current);
+    }
+
     if (progressMs < nowPlaying.durationMs) return;
     if (advancingRef.current) return;
+
+    console.log('[VirtualPlayer] Triggering auto-advance for:', nowPlaying.title);
     advancingRef.current = true;
     advanceQueue().catch(err => {
       console.error('[VirtualPlayer] advanceQueue failed:', err);
