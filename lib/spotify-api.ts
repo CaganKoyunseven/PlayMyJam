@@ -110,21 +110,26 @@ export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playl
   }
 
   let tracks: SpotifyTrackItem[] = [];
-  // Step 1: Try real API
-  try {
-    console.log('[importPlaylist] Trying API path (venue token)...');
-    tracks = await fetchAllTracksViaApi(spotifyPlaylistId);
-    console.log(`[importPlaylist] API returned ${tracks.length} tracks`);
-  } catch (err) {
-    console.warn('[importPlaylist] API failed with error:', (err as Error).message);
-    tracks = [];
-  }
 
-  // Step 2: Try scraping if API returned 0 or failed
-  if (tracks.length === 0) {
-    console.log('[importPlaylist] API returned 0 — scraping public playlist page...');
-    tracks = await scrapePlaylistFull(spotifyPlaylistId);
-    console.log(`[importPlaylist] scrape returned ${tracks.length} tracks`);
+  if (spotifyPlaylistId.startsWith('MOCK_')) {
+    console.log('[importPlaylist] Mock playlist detected, skipping API and directly fetching random hits...');
+  } else {
+    // Step 1: Try real API
+    try {
+      console.log('[importPlaylist] Trying API path (venue token)...');
+      tracks = await fetchAllTracksViaApi(spotifyPlaylistId);
+      console.log(`[importPlaylist] API returned ${tracks.length} tracks`);
+    } catch (err) {
+      console.warn('[importPlaylist] API failed with error:', (err as Error).message);
+      tracks = [];
+    }
+
+    // Step 2: Try scraping if API returned 0 or failed
+    if (tracks.length === 0) {
+      console.log('[importPlaylist] API returned 0 — scraping public playlist page...');
+      tracks = await scrapePlaylistFull(spotifyPlaylistId);
+      console.log(`[importPlaylist] scrape returned ${tracks.length} tracks`);
+    }
   }
 
   // Step 3 (demo fallback): if all real sources returned nothing, fetch random real hits from Spotify
@@ -132,7 +137,9 @@ export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playl
     console.log('[importPlaylist] All sources failed — fetching real random hits from Spotify for demo');
     try {
       // Use Client Credentials token (false) which is allowed to search public catalog without 403 errors
-      const searchData = await spotifyFetch('/search?q=top&type=track&limit=30', false);
+      const randomKeywords = ['pop', 'rock', 'dance', 'workout', 'party', 'chill', 'hits', 'summer', 'vibes', '2024'];
+      const query = randomKeywords[Math.floor(Math.random() * randomKeywords.length)];
+      const searchData = await spotifyFetch(`/search?q=${query}&type=track&limit=30`, false);
       const searchTracks = searchData?.tracks?.items ?? [];
 
       if (searchTracks.length > 0) {
