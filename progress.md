@@ -315,6 +315,11 @@ c4bb713  feat: admin panel Spotify tab (connect + playlist import)
 - [x] Active playlist UI in admin Spotify tab — automated `active_playlist_id` update during import; most recently imported playlist shown in green banner at top; ACTIVE badge on corresponding list item.
 - [x] **Unit Tests (Passed 2026-05-05):** 92 tests passing. Coverage for lib, API routes, and event bus verified.
 - [x] **Virtual Player (Applied 2026-05-05):** Added `started_at timestamptz` column to `queue_items`. `setNowPlaying` writes the current timestamp and clears `started_at` on all other rows. New `components/virtual-player.tsx` ticks every 500ms and computes `progress = Date.now() - startedAt` so playback progress works without the Spotify Web Playback SDK. Queue page (`/queue`) renders the full virtual player as the public Now Playing UI; admin dashboard renders a compact progress bar inside the Now Playing strip with `autoAdvance` enabled — when virtual elapsed ≥ duration, the admin client calls `advanceQueue()` to remove the finished song and promote the next one. Run `supabase/virtual-player.sql` once to add the column.
+- [x] **Queue Optimization (Applied 2026-05-05):** 
+    - Increased auto-fill target from 3 to 5 songs to ensure a healthier "Up Next" list.
+    - Implemented duplicate prevention in `fillQueueFromPlaylist()` to ensure unique songs in the upcoming queue.
+    - Added comprehensive error logging to `insertQueueItem` and `setNowPlaying` to track DB/RLS failures.
+    - Fixed Postgres integer overflow by switching from milliseconds to seconds for `queue_items.position`.
 
 ---
 
