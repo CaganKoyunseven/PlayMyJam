@@ -43,6 +43,9 @@ import {
   getVenueImportedPlaylists,
   getPlaylistSongs,
   advanceQueue,
+  fillQueueFromPlaylist,
+  getActivePlaylistId,
+  removeImportedPlaylist,
   getSessionProfile,
   getUserProfile,
 } from '@/lib/db';
@@ -231,10 +234,18 @@ describe('Token Balances', () => {
 
 describe('Playlists', () => {
   it('getVenueImportedPlaylists returns mapped lists', async () => {
-    const mockFrom = mockChain({ data: [{ id: 'p1', spotify_playlist_id: 'sp1', name: 'N', track_count: 5 }] });
-    vi.mocked(supabase.from).mockReturnValue(mockFrom as never);
+    vi.mocked(supabase.from).mockImplementation((table: string) => {
+      if (table === 'venues') {
+        return mockChain({ data: { active_playlist_id: 'p1' }, error: null }) as never;
+      }
+      if (table === 'playlists') {
+        return mockChain({ data: [{ id: 'p1', spotify_playlist_id: 'sp1', name: 'N', track_count: 5 }], error: null }) as never;
+      }
+      return mockChain({}) as never;
+    });
     const p = await getVenueImportedPlaylists();
     expect(p).toHaveLength(1);
+    expect(p[0].id).toBe('p1');
   });
 
   it('getPlaylistSongs returns mapped songs', async () => {
@@ -263,6 +274,46 @@ describe('Playlists', () => {
 
     await advanceQueue();
     expect(publish).toHaveBeenCalled();
+  });
+
+  it('advanceQueue works when nothing is playing', async () => {
+    const items = [{ id: 'item-2', isPlaying: false, position: 2 }];
+    vi.mocked(supabase.from).mockReturnValue(mockChain({ data: items }) as never);
+    await advanceQueue();
+    expect(publish).toHaveBeenCalled();
+  });
+
+  it('fillQueueFromPlaylist adds items from active playlist', async () => {
+    vi.mocked(supabase.from).mockImplementation((table: string) => {
+      if (table === 'venues') return mockChain({ data: { active_playlist_id: 'p1' } }) as never;
+      if (table === 'queue_items') return mockChain({ data: [] }) as never; // empty queue
+      if (table === 'playlist_songs') return mockChain({ data: [{ song_id: 's1' }, { song_id: 's2' }] }) as never;
+      return mockChain({}) as never;
+    });
+
+    await fillQueueFromPlaylist();
+    expect(supabase.from).toHaveBeenCalledWith('queue_items');
+  });
+});
+
+describe('Playlist Management', () => {
+  it('getActivePlaylistId returns id or null', async () => {
+    vi.mocked(supabase.from).mockReturnValue(mockChain({ data: { active_playlist_id: 'p1' } }) as never);
+    const id = await getActivePlaylistId();
+    expect(id).toBe('p1');
+
+    vi.mocked(supabase.from).mockReturnValue(mockChain({ data: null }) as never);
+    const id2 = await getActivePlaylistId();
+    expect(id2).toBeNull();
+  });
+
+  it('removeImportedPlaylist cleans up records', async () => {
+    const mockFrom = mockChain({ data: { active_playlist_id: 'p1' } });
+    vi.mocked(supabase.from).mockReturnValue(mockFrom as never);
+    await removeImportedPlaylist('p1');
+    expect(supabase.from).toHaveBeenCalledWith('playlist_songs');
+    expect(supabase.from).toHaveBeenCalledWith('playlists');
+    expect(supabase.from).toHaveBeenCalledWith('venues');
   });
 });
 
