@@ -115,7 +115,7 @@ export async function removeQueueItem(id: string): Promise<void> {
 export async function setNowPlaying(id: string, spotifyTrackUri?: string, deviceId?: string): Promise<void> {
   const { error: e1 } = await supabase.from('queue_items').update({ is_playing: false, started_at: null }).eq('venue_id', DEFAULT_VENUE_ID);
   if (e1) console.error('[db] setNowPlaying reset failed:', e1);
-  
+
   const { error: e2 } = await supabase.from('queue_items').update({ is_playing: true, started_at: new Date().toISOString() }).eq('id', id);
   if (e2) console.error('[db] setNowPlaying set true failed:', e2);
 
@@ -369,7 +369,7 @@ export async function fillQueueFromPlaylist(): Promise<void> {
   // Prevent duplicate songs in the queue
   const existingSongIds = new Set(items.map(i => i.songId));
   const availableSongs = pSongs.filter(s => !existingSongIds.has(s.song_id));
-  
+
   // If we ran out of unique songs, we can just use the full list to keep music playing
   const pool = availableSongs.length > 0 ? availableSongs : pSongs;
 
