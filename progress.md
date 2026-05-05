@@ -41,6 +41,7 @@ profiles           — User profiles (username, email) — linked to auth.users
 2. `supabase/events.sql` — Events table
 3. `supabase/admin.sql` — Admin patches (session_id column, extra RLS policies)
 4. `supabase/users.sql` — Profiles table, RLS, signup trigger (auto-creates profile on new user)
+5. `supabase/virtual-player.sql` — Adds `started_at` timestamp on `queue_items` for the Virtual Player
 
 ### Supabase Dashboard Steps
 - **Database → Replication → Tables** → enable Realtime for `events`, `queue_items`, `song_requests`
@@ -313,6 +314,7 @@ c4bb713  feat: admin panel Spotify tab (connect + playlist import)
 - [x] **[DEMO WORKAROUND]** Spotify Dev Mode blocks `/tracks?ids=...` and `/playlists/{id}/tracks` (403/empty). Root cause: Spotify platform restriction on unreviewed apps. **Fix:** `importPlaylist` now uses `supabaseAdmin` with `SERVICE_ROLE_KEY` to bypass RLS. It falls through API → Scrape → **Mock Seed** so import always succeeds. `getVenuePlaylists` also returns mock playlists on error to keep Admin panel functional.
 - [x] Active playlist UI in admin Spotify tab — automated `active_playlist_id` update during import; most recently imported playlist shown in green banner at top; ACTIVE badge on corresponding list item.
 - [x] **Unit Tests (Passed 2026-05-05):** 92 tests passing. Coverage for lib, API routes, and event bus verified.
+- [x] **Virtual Player (Applied 2026-05-05):** Added `started_at timestamptz` column to `queue_items`. `setNowPlaying` writes the current timestamp and clears `started_at` on all other rows. New `components/virtual-player.tsx` ticks every 500ms and computes `progress = Date.now() - startedAt` so playback progress works without the Spotify Web Playback SDK. Queue page (`/queue`) renders the full virtual player as the public Now Playing UI; admin dashboard renders a compact progress bar inside the Now Playing strip with `autoAdvance` enabled — when virtual elapsed ≥ duration, the admin client calls `advanceQueue()` to remove the finished song and promote the next one. Run `supabase/virtual-player.sql` once to add the column.
 
 ---
 

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 
 import { QRCodeSVG } from 'qrcode.react';
 
+import VirtualPlayer from '@/components/virtual-player';
 import { DEFAULT_VENUE_ID } from '@/lib/constants';
 import {
   getPendingRequests,
@@ -236,22 +237,31 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      {/* Now Playing bar */}
+      {/* Now Playing bar — uses started_at virtual progress + auto-advance */}
       {nowPlaying && (
-        <div className="bg-primary/10 border-primary/30 mx-4 mt-4 flex items-center gap-3 rounded-2xl border px-4 py-3">
-          <span className="material-symbols-outlined text-primary animate-pulse text-[20px]">equalizer</span>
-          <div className="min-w-0 flex-1">
-            <p className="text-primary text-xs font-bold tracking-wider uppercase">Now Playing</p>
-            <p className="truncate text-sm font-semibold">{nowPlaying.title}</p>
-            <p className="truncate text-xs text-slate-400">{nowPlaying.artist}</p>
+        <div className="bg-primary/10 border-primary/30 mx-4 mt-4 rounded-2xl border px-4 py-3">
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined text-primary animate-pulse text-[20px]">equalizer</span>
+            <div className="min-w-0 flex-1">
+              <p className="text-primary text-xs font-bold tracking-wider uppercase">Now Playing</p>
+              <p className="truncate text-sm font-semibold">{nowPlaying.title}</p>
+              <p className="truncate text-xs text-slate-400">{nowPlaying.artist}</p>
+            </div>
+            {nowPlaying.albumArt && (
+              <img
+                src={nowPlaying.albumArt}
+                alt=""
+                className="size-10 shrink-0 rounded-lg object-cover"
+              />
+            )}
           </div>
-          {nowPlaying.albumArt && (
-            <img
-              src={nowPlaying.albumArt}
-              alt=""
-              className="size-10 shrink-0 rounded-lg object-cover"
+          <div className="mt-3">
+            <VirtualPlayer
+              nowPlaying={nowPlaying}
+              compact
+              autoAdvance
             />
-          )}
+          </div>
         </div>
       )}
 
