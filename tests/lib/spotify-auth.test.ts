@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 
 // Set env before any import so module-level constants pick them up
 process.env.SPOTIFY_CLIENT_ID = 'test-client-id';
@@ -10,6 +11,17 @@ process.env.SPOTIFY_REDIRECT_URI = 'http://localhost:3000/api/spotify/callback';
 // Mock supabase so refreshVenueToken doesn't hit DB
 vi.mock('@/lib/supabase', () => ({
   supabase: {
+    from: vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: null, error: null }),
+    }),
+  },
+}));
+
+vi.mock('@/lib/supabase-admin', () => ({
+  supabaseAdmin: {
     from: vi.fn().mockReturnValue({
       select: vi.fn().mockReturnThis(),
       update: vi.fn().mockReturnThis(),
@@ -137,12 +149,14 @@ describe('refreshVenueToken and getVenueToken', () => {
 
   it('fetches new token if expiry is in the past', async () => {
     const pastDate = new Date(Date.now() - 3600000).toISOString();
-    vi.mocked(supabase.from).mockReturnValue({
+    const mockMethods = {
       select: vi.fn().mockReturnThis(),
       update: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data: { spotify_refresh_token: 'rt', spotify_token_expires_at: pastDate }, error: null }),
-    } as never);
+    };
+    vi.mocked(supabase.from).mockReturnValue(mockMethods as never);
+    vi.mocked(supabaseAdmin.from).mockReturnValue(mockMethods as never);
 
     vi.stubGlobal(
       'fetch',

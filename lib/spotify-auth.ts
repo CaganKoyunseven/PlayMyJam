@@ -1,5 +1,6 @@
 import { DEFAULT_VENUE_ID } from './constants';
 import { supabase } from './supabase';
+import { supabaseAdmin } from './supabase-admin';
 
 const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID!;
 const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET!;
@@ -104,7 +105,7 @@ export async function refreshVenueToken(venueId: string): Promise<string> {
   const tokens = await res.json();
   const newExpiry = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
 
-  await supabase
+  await supabaseAdmin
     .from('venues')
     .update({
       spotify_access_token: tokens.access_token,
