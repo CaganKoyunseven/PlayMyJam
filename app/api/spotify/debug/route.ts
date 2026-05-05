@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { isAdminAuthed } from '@/lib/admin-auth';
 import { DEFAULT_VENUE_ID } from '@/lib/constants';
+import { getVenueToken } from '@/lib/spotify-auth';
 import { supabase } from '@/lib/supabase';
 
 export async function GET() {
@@ -9,62 +10,77 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { data: venue } = await supabase.from('venues').select('spotify_access_token').eq('id', DEFAULT_VENUE_ID).single();
+  const { data: venue } = await supabase.from('venues').select('spotify_access_token, spotify_token_expires_at').eq('id', DEFAULT_VENUE_ID).single();
 
   if (!venue?.spotify_access_token) {
-    return NextResponse.json({ error: 'No venue token' });
+    return NextResponse.json({ error: 'No venue token in DB' });
   }
 
-  const token = venue.spotify_access_token;
+  const directToken = venue.spotify_access_token;
+  const tokenExpiresAt = venue.spotify_token_expires_at;
+  const tokenExpired = tokenExpiresAt ? Date.now() > new Date(tokenExpiresAt).getTime() : 'unknown';
 
-  // Get user's playlists
+  // Test whether getVenueToken() (the same path importPlaylist uses) returns a token
+  let venueTokenResult: string | null = null;
+  let venueTokenError: string | null = null;
+  try {
+    venueTokenResult = await getVenueToken();
+  } catch (e) {
+    venueTokenError = (e as Error).message;
+  }
+
+  // Get user's playlists using direct token
   const meRes = await fetch('https://api.spotify.com/v1/me/playlists?limit=5', {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Authorization: `Bearer ${directToken}` },
   });
   const meData = meRes.ok ? await meRes.json() : null;
   const playlists = meData?.items ?? [];
   const firstMusicPlaylist = playlists.find((p: { name: string }) => p.name !== 'Deutsch Podcast A1/A2') ?? playlists[0];
 
   if (!firstMusicPlaylist) {
-    return NextResponse.json({ error: 'No playlists found' });
+    return NextResponse.json({
+      error: 'No playlists found',
+      tokenInfo: {
+        directTokenPrefix: directToken.slice(0, 20) + '...',
+        tokenExpiresAt,
+        tokenExpired,
+        getVenueTokenReturns: venueTokenResult ? venueTokenResult.slice(0, 20) + '...' : null,
+        getVenueTokenError: venueTokenError,
+      },
+    });
   }
 
   const pid = firstMusicPlaylist.id;
   const pname = firstMusicPlaylist.name;
 
-  // Test API: fetch playlist details including tracks
-  let apiResult: { tracksFound: number; sampleTracks: string[] } | string = 'not tested';
+  // Test API with direct token — show raw status and body so we can see 403 errors
+  let apiResult: unknown = 'not tested';
   try {
-    const apiData = await (
-      await fetch(`https://api.spotify.com/v1/playlists/${pid}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-    ).json();
-    apiResult = {
-      tracksFound: apiData?.tracks?.total ?? 0,
-      sampleTracks: (apiData?.tracks?.items ?? []).slice(0, 3).map((it: { track?: { name: string } }) => it.track?.name),
-    };
+    const apiRes = await fetch(`https://api.spotify.com/v1/playlists/${pid}`, {
+      headers: { Authorization: `Bearer ${directToken}` },
+    });
+    const apiBody = await apiRes.text();
+    if (apiRes.ok) {
+      const apiData = JSON.parse(apiBody);
+      apiResult = {
+        status: 200,
+        tracksTotal: apiData?.tracks?.total ?? 0,
+        tracksInlineCount: (apiData?.tracks?.items ?? []).length,
+        sampleTracks: (apiData?.tracks?.items ?? []).slice(0, 3).map((it: { track?: { name: string } }) => it?.track?.name),
+      };
+    } else {
+      apiResult = { status: apiRes.status, body: apiBody.slice(0, 300) };
+    }
   } catch (e) {
-    apiResult = (e as Error).message;
+    apiResult = { error: (e as Error).message };
   }
 
-  // Test scraping: fetch the public playlist page
-  let scrapeResult:
-    | {
-        status: number;
-        htmlLength: number;
-        trackIdsFound: number;
-        sampleTrackIds: string[];
-        htmlSnippet: string;
-      }
-    | string = 'not tested';
-
+  // Test scraping
+  let scrapeResult: unknown = 'not tested';
+  let scrapedIds: string[] = [];
   try {
     const res = await fetch(`https://open.spotify.com/playlist/${pid}`, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; PlayMyJam/1.0)',
-        Accept: 'text/html',
-      },
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PlayMyJam/1.0)', Accept: 'text/html' },
     });
     const html = await res.text();
     const trackIdPattern = /\/track\/([a-zA-Z0-9]{22})/g;
@@ -73,64 +89,82 @@ export async function GET() {
     while ((match = trackIdPattern.exec(html)) !== null) {
       ids.add(match[1]);
     }
+    scrapedIds = Array.from(ids);
     scrapeResult = {
       status: res.status,
       htmlLength: html.length,
-      trackIdsFound: ids.size,
-      sampleTrackIds: Array.from(ids).slice(0, 5),
-      htmlSnippet: html.slice(0, 500),
+      trackIdsFound: scrapedIds.length,
+      sampleTrackIds: scrapedIds.slice(0, 5),
     };
   } catch (e) {
-    scrapeResult = (e as Error).message;
+    scrapeResult = { error: (e as Error).message };
   }
 
-  // If we found track IDs, test /tracks API with Client Credentials
-  let tracksApiTest: string | object = 'no track IDs to test';
-  const trackIds = typeof scrapeResult === 'object' ? scrapeResult.sampleTrackIds : [];
-  if (trackIds.length > 0) {
-    try {
-      const clientId = process.env.SPOTIFY_CLIENT_ID!;
-      const clientSecret = process.env.SPOTIFY_CLIENT_SECRET!;
-      const tokenRes = await fetch('https://accounts.spotify.com/api/token', {
-        method: 'POST',
-        headers: {
-          Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: 'grant_type=client_credentials',
-      });
-      const tokenData = await tokenRes.json();
-      const ccToken = tokenData.access_token;
+  // Test /tracks?ids= with DIRECT token (same as what's in the DB)
+  let tracksTestDirect: unknown = 'no track IDs';
+  // Test /tracks?ids= with getVenueToken() result (same path as importPlaylist)
+  let tracksTestVenueToken: unknown = 'no track IDs';
 
-      const tracksRes = await fetch(`https://api.spotify.com/v1/tracks?ids=${trackIds.slice(0, 3).join(',')}`, {
-        headers: { Authorization: `Bearer ${ccToken}` },
+  if (scrapedIds.length > 0) {
+    const sampleIds = scrapedIds.slice(0, 3).join(',');
+
+    // Test 1: direct token from DB
+    try {
+      const res = await fetch(`https://api.spotify.com/v1/tracks?ids=${sampleIds}`, {
+        headers: { Authorization: `Bearer ${directToken}` },
       });
-      if (tracksRes.ok) {
-        const data = await tracksRes.json();
-        tracksApiTest = {
+      if (res.ok) {
+        const data = await res.json();
+        tracksTestDirect = {
           status: 200,
           tracksReturned: data.tracks?.length,
-          sample: data.tracks?.[0]
-            ? {
-                id: data.tracks[0].id,
-                name: data.tracks[0].name,
-                artist: data.tracks[0].artists?.[0]?.name,
-              }
-            : null,
+          sample: data.tracks?.[0] ? { id: data.tracks[0].id, name: data.tracks[0].name, artist: data.tracks[0].artists?.[0]?.name } : null,
         };
       } else {
-        tracksApiTest = `${tracksRes.status} ${await tracksRes.text().catch(() => '')}`;
+        tracksTestDirect = { status: res.status, body: await res.text().catch(() => '') };
       }
     } catch (e) {
-      tracksApiTest = (e as Error).message;
+      tracksTestDirect = { error: (e as Error).message };
+    }
+
+    // Test 2: getVenueToken() result (the path importPlaylist actually uses)
+    if (venueTokenResult) {
+      try {
+        const res = await fetch(`https://api.spotify.com/v1/tracks?ids=${sampleIds}`, {
+          headers: { Authorization: `Bearer ${venueTokenResult}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          tracksTestVenueToken = {
+            status: 200,
+            tracksReturned: data.tracks?.length,
+            sample: data.tracks?.[0] ? { id: data.tracks[0].id, name: data.tracks[0].name, artist: data.tracks[0].artists?.[0]?.name } : null,
+          };
+        } else {
+          tracksTestVenueToken = { status: res.status, body: await res.text().catch(() => '') };
+        }
+      } catch (e) {
+        tracksTestVenueToken = { error: (e as Error).message };
+      }
+    } else {
+      tracksTestVenueToken = { error: `getVenueToken() returned null. getVenueToken error: ${venueTokenError}` };
     }
   }
 
   return NextResponse.json({
     testPlaylist: { id: pid, name: pname },
+    tokenInfo: {
+      directTokenPrefix: directToken.slice(0, 20) + '...',
+      tokenExpiresAt,
+      tokenExpired,
+      getVenueTokenReturns: venueTokenResult ? venueTokenResult.slice(0, 20) + '...' : null,
+      getVenueTokenError: venueTokenError,
+      tokensMatch: venueTokenResult != null ? venueTokenResult.slice(0, 20) === directToken.slice(0, 20) : false,
+    },
     allPlaylists: playlists.map((p: { id: string; name: string }) => ({ id: p.id, name: p.name })),
     apiResult,
     scrapeResult,
-    tracksApiTest,
+    tracksTestDirect,
+    tracksTestVenueToken,
   });
 }
