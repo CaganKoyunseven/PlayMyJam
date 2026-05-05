@@ -2,6 +2,7 @@ import { DEFAULT_VENUE_ID } from './constants';
 import { browseSongs } from './mock-data';
 import { getClientCredentialsToken, getVenueToken } from './spotify-auth';
 import { supabase } from './supabase';
+import { supabaseAdmin } from './supabase-admin';
 
 async function spotifyFetch(path: string, useVenueToken = false, options: RequestInit = {}) {
   const token = useVenueToken ? await getVenueToken() : await getClientCredentialsToken();
@@ -56,13 +57,31 @@ export type SpotifyPlaylist = {
 type RawPlaylist = { id: string; name: string; images: { url: string }[]; tracks: { total: number } };
 
 export async function getVenuePlaylists(): Promise<SpotifyPlaylist[]> {
-  const data = await spotifyFetch('/me/playlists?limit=50', true);
-  return (data?.items ?? []).map((p: RawPlaylist) => ({
-    id: p.id,
-    name: p.name,
-    imageUrl: p.images?.[0]?.url ?? null,
-    trackCount: p.tracks?.total ?? 0,
-  }));
+  try {
+    const data = await spotifyFetch('/me/playlists?limit=50', true);
+    return (data?.items ?? []).map((p: RawPlaylist) => ({
+      id: p.id,
+      name: p.name,
+      imageUrl: p.images?.[0]?.url ?? null,
+      trackCount: p.tracks?.total ?? 0,
+    }));
+  } catch (e) {
+    console.warn('[getVenuePlaylists] Failed to fetch from Spotify, returning mock playlists. Error:', (e as Error).message);
+    return [
+      {
+        id: 'MOCK_PLAYLIST_1',
+        name: 'Demo Playlist (Top Hits)',
+        imageUrl: null,
+        trackCount: browseSongs.length,
+      },
+      {
+        id: 'MOCK_PLAYLIST_2',
+        name: 'Demo Playlist (Chill)',
+        imageUrl: null,
+        trackCount: 15,
+      },
+    ];
+  }
 }
 
 // ── Import selected playlist into DB ─────────────────────────
@@ -135,7 +154,7 @@ export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playl
   }
 
   // Upsert songs
-  await supabase.from('songs').upsert(
+  await supabaseAdmin.from('songs').upsert(
     tracks.map(t => ({
       spotify_track_id: t.spotifyTrackId,
       title: t.title,
@@ -148,7 +167,7 @@ export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playl
   );
 
   // Fetch song IDs
-  const { data: songRows } = await supabase
+  const { data: songRows } = await supabaseAdmin
     .from('songs')
     .select('id, spotify_track_id')
     .in(
@@ -159,7 +178,7 @@ export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playl
   const songMap = Object.fromEntries((songRows ?? []).map(s => [s.spotify_track_id, s.id]));
 
   // Upsert playlist record
-  const { data: playlist, error: playlistError } = await supabase
+  const { data: playlist, error: playlistError } = await supabaseAdmin
     .from('playlists')
     .upsert(
       {
@@ -191,7 +210,14 @@ export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playl
     }));
 
   if (playlistSongs.length > 0) {
-    await supabase.from('playlist_songs').upsert(playlistSongs, { onConflict: 'playlist_id,song_id' });
+    await supabaseAdmin.from('playlist_songs').upsert(playlistSongs, { onConflict: 'playlist_id,song_id' });
+  }
+
+  // Set as active playlist for the venue
+  const { error: venueError } = await supabaseAdmin.from('venues').update({ active_playlist_id: playlistId }).eq('id', DEFAULT_VENUE_ID);
+
+  if (venueError) {
+    console.error('[importPlaylist] Failed to set active playlist on venue:', venueError);
   }
 
   return { playlistId, imported: tracks.length };

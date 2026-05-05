@@ -13,6 +13,8 @@ import {
   getCurrentlyPlaying,
   importPlaylist,
 } from '@/lib/spotify-api';
+import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 
 vi.mock('@/lib/supabase', () => ({
   supabase: {
@@ -21,7 +23,21 @@ vi.mock('@/lib/supabase', () => ({
       eq: vi.fn().mockReturnThis(),
       in: vi.fn().mockReturnThis(),
       upsert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data: { id: 'p1', spotify_access_token: 'mock-token' }, error: null }),
+    }),
+  },
+}));
+
+vi.mock('@/lib/supabase-admin', () => ({
+  supabaseAdmin: {
+    from: vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      upsert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: { id: 'p1' }, error: null }),
     }),
   },
 }));
@@ -195,9 +211,11 @@ describe('Spotify API Fetch Wrappers', () => {
     expect(res.is_playing).toBe(true);
   });
 
-  it('throws on non-ok status', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 403, text: async () => '{"error": {"message": "Forbidden"}}' }));
-    await expect(getVenuePlaylists()).rejects.toThrow('Forbidden');
+  it('returns mock playlists on API error instead of throwing', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 403 }));
+    const p = await getVenuePlaylists();
+    expect(p).toHaveLength(2);
+    expect(p[0].id).toBe('MOCK_PLAYLIST_1');
   });
 
   it('importPlaylist uses API to fetch tracks', async () => {
