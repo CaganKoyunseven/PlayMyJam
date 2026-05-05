@@ -252,8 +252,16 @@ export default function AdminDashboard() {
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-slate-400">The Neon Lounge</span>
           <button
+            onClick={() => window.location.reload()}
+            className="flex size-8 items-center justify-center rounded-full text-white/40 transition-colors hover:text-white"
+            title="Refresh Dashboard"
+          >
+            <span className="material-symbols-outlined text-[20px]">refresh</span>
+          </button>
+          <button
             onClick={handleLogout}
             className="flex size-8 items-center justify-center rounded-full text-white/40 transition-colors hover:text-white"
+            title="Logout"
           >
             <span className="material-symbols-outlined text-[20px]">logout</span>
           </button>
