@@ -231,18 +231,18 @@ Without these, `spotify_access_token` stays NULL after OAuth (PostgREST ignores 
 **What was tried:**
 1. **Fallback API calls:** Tried using Client Credentials (CC) instead of Venue (OAuth) token. CC works for public playlists but Spotify still blocks `/tracks` in Dev Mode.
 2. **Field filtering:** Tried `?fields=tracks(items(track(id...)))` to minimize response size — no effect, still blocked.
-3. **Market parameter:** Tried `?market=from_token` to bypass geo-restrictions — no effect.
+3. **Hybrid Scraping:** Fetched public page and extracted track IDs via regex. This bypassed the "playlist tracks" block but Step 4 (enrichment via `/tracks?ids=...`) still failed with 403 when using CC token.
+4. **API Priority (Applied 2026-05-05):** Modified `importPlaylist` to check the official API first. Since the admin is an allowlisted Test User, the API *does* return tracks for them.
+5. **Venue Token for Enrichment (Planned):** Even after getting IDs via API, the batch enrichment call (`/tracks?ids=...`) failed with 403 when using Client Credentials. We are switching to the Venue (OAuth) token for this step as well to leverage the user's allowlisted status.
 
-**Current Solution: Hybrid Scraping (Applied 2026-05-05)**
-Since the Spotify Web API is blocked, we now use a hybrid approach in `lib/spotify-api.ts`:
-1. **Scraping:** The server fetches the public Spotify playlist page (`open.spotify.com/playlist/{id}`).
-2. **Extraction:** A regex pattern `\/track\/([a-zA-Z0-9]{22})` extracts track IDs from the page HTML. This bypasses the API restrictions entirely.
-3. **Batch Enrichment:** Once we have the IDs, we call the `/tracks?ids=...` API endpoint using Client Credentials to get the metadata (title, artist, album art, duration). **Note:** The `/tracks` (plural) endpoint is NOT blocked in Dev Mode, only the playlist-specific tracks sub-resource.
-4. **Supabase Sync:** Enriched tracks are upserted into the `songs` and `playlist_songs` tables.
+**Current Solution: API-First + Venue Enrichment**
+1. **API Try:** Try fetching playlist details via API using Venue Token.
+2. **Scrape Fallback:** If API fails or returns 0 tracks, fallback to scraping the public page.
+3. **Venue-Authorized Enrichment:** Call the `/tracks?ids=...` endpoint using the Venue (OAuth) token instead of Client Credentials. This ensures that allowlisted users can fetch track metadata even in Dev Mode.
 
 **Remaining Tasks / Blockers:**
-- [ ] **Lint/Prettier Fixes:** Recent changes to the debug route and scraping logic introduced formatting errors that are blocking Railway CI.
-- [ ] **Verification:** Confirm that the scraping logic works correctly on Railway's IP range (Spotify sometimes blocks data center IPs).
+- [x] **Lint/Prettier Fixes:** Fixed formatting and 'any' type issues in `spotify-api.ts` and `debug/route.ts`.
+- [ ] **Verification:** Confirm that Venue Token enrichment bypasses the 403 in Dev Mode.
 - [ ] **Extended Quota:** Long-term fix is to apply for "Extended Quota" on the Spotify Developer Dashboard to remove Dev Mode limits.
 
 ---

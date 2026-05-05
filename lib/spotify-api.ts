@@ -75,28 +75,69 @@ export type SpotifyTrackItem = {
   durationMs: number;
 };
 
+// ── Fetch all track IDs from a playlist via the dedicated /tracks endpoint ──
+// This handles Spotify pagination (max 100 items per page).
+// Uses venue token since Dev Mode blocks CC tokens on this endpoint.
+async function fetchPlaylistTrackIds(spotifyPlaylistId: string): Promise<string[]> {
+  const allIds: string[] = [];
+  let url: string | null = `/playlists/${spotifyPlaylistId}/tracks?fields=items(track(id)),next,total&limit=100`;
+
+  while (url) {
+    try {
+      // If it's a full URL (pagination next link), extract the path
+      const fetchPath = url.startsWith('http') ? url.replace('https://api.spotify.com/v1', '') : url;
+
+      const data = await spotifyFetch(fetchPath, true);
+
+      if (data?.items) {
+        for (const item of data.items) {
+          if (item?.track?.id) {
+            allIds.push(item.track.id);
+          }
+        }
+      }
+
+      // Spotify returns a `next` URL for pagination, or null when done
+      url = data?.next ?? null;
+    } catch (e) {
+      console.error('[fetchPlaylistTrackIds] failed:', (e as Error).message);
+      break;
+    }
+  }
+
+  return allIds;
+}
+
 export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playlistId: string; imported: number }> {
-  // Step 1: Get playlist metadata from API (works in Dev Mode)
+  // Step 1: Get playlist metadata from API (works in Dev Mode for allowlisted users)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let playlistData: any = null;
   try {
-    playlistData = await spotifyFetch(`/playlists/${spotifyPlaylistId}`, true);
+    playlistData = await spotifyFetch(`/playlists/${spotifyPlaylistId}?fields=name,images,tracks.total`, true);
   } catch {
     try {
-      playlistData = await spotifyFetch(`/playlists/${spotifyPlaylistId}`, false);
+      playlistData = await spotifyFetch(`/playlists/${spotifyPlaylistId}?fields=name,images,tracks.total`, false);
     } catch {
       /* metadata will be null, that's ok */
     }
   }
 
-  // Step 2: Extract track IDs from API response if available (works for allowlisted Test Users)
+  // Step 2: Fetch track IDs using the dedicated /tracks endpoint (paginated, venue token)
+  // This is the CORRECT way — the /playlists/{id} response only includes the first page of tracks,
+  // but /playlists/{id}/tracks properly paginates through ALL tracks.
   let trackIds: string[] = [];
-  if (playlistData?.tracks?.items) {
+  console.log('[importPlaylist] Trying dedicated /tracks endpoint with venue token...');
+  trackIds = await fetchPlaylistTrackIds(spotifyPlaylistId);
+  console.log(`[importPlaylist] /tracks endpoint returned ${trackIds.length} track IDs`);
+
+  // Step 3: If /tracks endpoint failed (Dev Mode 403), try extracting from inline playlist response
+  if (trackIds.length === 0 && playlistData?.tracks?.items) {
+    console.log('[importPlaylist] /tracks endpoint returned 0, trying inline tracks from playlist response...');
     trackIds = playlistData.tracks.items.map((item: { track?: { id: string } }) => item.track?.id).filter(Boolean);
-    console.log(`[importPlaylist] found ${trackIds.length} track IDs via API`);
+    console.log(`[importPlaylist] found ${trackIds.length} track IDs from inline response`);
   }
 
-  // Step 3: Fallback to scraping only if API returned 0 tracks (Dev Mode restriction)
+  // Step 4: Fallback to scraping only if API returned 0 tracks
   if (trackIds.length === 0) {
     console.log('[importPlaylist] API returned 0 tracks, falling back to scraping...');
     trackIds = await scrapePlaylistTrackIds(spotifyPlaylistId);
@@ -107,12 +148,13 @@ export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playl
     return { playlistId: '', imported: 0 };
   }
 
-  // Step 4: Batch-fetch full track details via /tracks API (up to 50 per request)
+  // Step 5: Batch-fetch full track details via /tracks API (up to 50 per request)
+  // IMPORTANT: Use venue token (true) — Client Credentials gets 403 in Dev Mode!
   const tracks: SpotifyTrackItem[] = [];
   for (let i = 0; i < trackIds.length; i += 50) {
     const batch = trackIds.slice(i, i + 50);
     try {
-      const data = await spotifyFetch(`/tracks?ids=${batch.join(',')}`, false);
+      const data = await spotifyFetch(`/tracks?ids=${batch.join(',')}`, true);
       for (const t of data?.tracks ?? []) {
         if (!t?.id) continue;
         tracks.push({
@@ -125,7 +167,25 @@ export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playl
         });
       }
     } catch (e) {
-      console.error('[importPlaylist] /tracks batch failed:', (e as Error).message);
+      console.error(`[importPlaylist] /tracks batch ${i / 50 + 1} failed:`, (e as Error).message);
+      // Try with CC token as last resort for this batch
+      try {
+        console.log(`[importPlaylist] Retrying batch ${i / 50 + 1} with CC token...`);
+        const data = await spotifyFetch(`/tracks?ids=${batch.join(',')}`, false);
+        for (const t of data?.tracks ?? []) {
+          if (!t?.id) continue;
+          tracks.push({
+            spotifyTrackId: t.id,
+            title: t.name,
+            artist: t.artists?.map((a: { name: string }) => a.name).join(', ') ?? 'Unknown',
+            album: t.album?.name ?? '',
+            albumArt: t.album?.images?.[0]?.url ?? null,
+            durationMs: t.duration_ms ?? 0,
+          });
+        }
+      } catch (e2) {
+        console.error(`[importPlaylist] /tracks batch ${i / 50 + 1} CC fallback also failed:`, (e2 as Error).message);
+      }
     }
   }
 
