@@ -68,8 +68,17 @@ export default function QueuePage() {
       })
       .subscribe();
 
+    // Fallback polling every 5 seconds in case Realtime replication is disabled
+    const interval = setInterval(() => {
+      getQueueItems().then(items => {
+        setQueue(items.filter(i => !i.isPlaying));
+        setNowPlayingItem(items.find(i => i.isPlaying) ?? null);
+      });
+    }, 5000);
+
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(interval);
     };
   }, []);
 
