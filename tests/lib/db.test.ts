@@ -158,6 +158,7 @@ describe('Song Requests', () => {
     // Handle playlists fetch returning empty to avoid upsert issues
     vi.mocked(supabase.from).mockImplementation((table: string) => {
       if (table === 'playlists') return mockChain({ data: [] }) as never;
+      if (table === 'queue_items') return mockChain({ data: [] }) as never;
       return mockFrom as never;
     });
 

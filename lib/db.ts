@@ -176,6 +176,15 @@ export async function approveRequest(requestId: string, songId: string, sessionI
 
   await supabase.from('song_requests').update({ status: 'accepted' }).eq('id', requestId);
 
+  // Add the approved request directly to the queue
+  await insertQueueItem(songId);
+
+  // Jump-start the player if nothing is playing
+  const items = await getQueueItems();
+  if (!items.find(i => i.isPlaying)) {
+    await advanceQueue();
+  }
+
   publish(EventType.SONG_ADDED_TO_LIBRARY, {
     songId,
     title: song?.title ?? '',
@@ -337,8 +346,32 @@ export async function getPlaylistSongs(playlistId: string): Promise<QueueItem[]>
   });
 }
 
+// Ensure the queue has upcoming songs from the active playlist
+export async function fillQueueFromPlaylist(): Promise<void> {
+  const items = await getQueueItems();
+  const upcomingCount = items.filter(i => !i.isPlaying).length;
+
+  if (upcomingCount >= 3) return;
+
+  const { data: venue } = await supabase.from('venues').select('active_playlist_id').eq('id', DEFAULT_VENUE_ID).single();
+  if (!venue?.active_playlist_id) return;
+
+  const { data: pSongs } = await supabase.from('playlist_songs').select('song_id').eq('playlist_id', venue.active_playlist_id);
+  if (!pSongs || pSongs.length === 0) return;
+
+  const needed = 3 - upcomingCount;
+  for (let i = 0; i < needed; i++) {
+    const randomSong = pSongs[Math.floor(Math.random() * pSongs.length)];
+    // Provide a slightly incremented timestamp so positions are strictly ordered
+    await insertQueueItem(randomSong.song_id, Date.now() + i);
+  }
+}
+
 // Auto-advance queue when current song finishes
 export async function advanceQueue(): Promise<void> {
+  // Ensure we have upcoming songs before we try to advance
+  await fillQueueFromPlaylist();
+
   const items = await getQueueItems();
   const playing = items.find(i => i.isPlaying);
   const upNext = items.filter(i => !i.isPlaying).sort((a, b) => a.position - b.position)[0];
