@@ -23,30 +23,36 @@ function elapsedMs(startedAt: string | null): number {
 }
 
 export default function VirtualPlayer({ nowPlaying, autoAdvance = false, compact = false }: Props) {
-  const [progressMs, setProgressMs] = useState(() => elapsedMs(nowPlaying?.startedAt ?? null));
+  // Tick counter — incremented every 500ms to force re-render. Progress itself
+  // is derived during render from `Date.now() - startedAt`, so we never call
+  // setState synchronously in the effect body.
+  const [, setTick] = useState(0);
   const advancingRef = useRef(false);
+  const startedAt = nowPlaying?.startedAt ?? null;
 
   useEffect(() => {
     advancingRef.current = false;
-    setProgressMs(elapsedMs(nowPlaying?.startedAt ?? null));
+  }, [startedAt]);
 
-    if (!nowPlaying || !nowPlaying.startedAt) return;
-
-    const id = setInterval(() => {
-      const elapsed = elapsedMs(nowPlaying.startedAt);
-      setProgressMs(elapsed);
-
-      if (autoAdvance && nowPlaying.durationMs > 0 && elapsed >= nowPlaying.durationMs && !advancingRef.current) {
-        advancingRef.current = true;
-        advanceQueue().catch(err => {
-          console.error('[VirtualPlayer] advanceQueue failed:', err);
-          advancingRef.current = false;
-        });
-      }
-    }, 500);
-
+  useEffect(() => {
+    if (!startedAt) return;
+    const id = setInterval(() => setTick(t => t + 1), 500);
     return () => clearInterval(id);
-  }, [nowPlaying, autoAdvance]);
+  }, [startedAt]);
+
+  const progressMs = elapsedMs(startedAt);
+
+  useEffect(() => {
+    if (!autoAdvance || !nowPlaying || !startedAt) return;
+    if (nowPlaying.durationMs <= 0) return;
+    if (progressMs < nowPlaying.durationMs) return;
+    if (advancingRef.current) return;
+    advancingRef.current = true;
+    advanceQueue().catch(err => {
+      console.error('[VirtualPlayer] advanceQueue failed:', err);
+      advancingRef.current = false;
+    });
+  }, [autoAdvance, nowPlaying, startedAt, progressMs]);
 
   if (!nowPlaying) {
     if (compact) return null;
