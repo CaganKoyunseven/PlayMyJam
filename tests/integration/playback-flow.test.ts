@@ -54,8 +54,8 @@ describe('Playback Flow Integration', () => {
     ];
 
     vi.mocked(supabase.from).mockImplementation((table: string) => {
-      if (table === 'queue_items') return createMockChain(mockItems);
-      return createMockChain();
+      if (table === 'queue_items') return createMockChain(mockItems) as unknown as ReturnType<typeof supabase.from>;
+      return createMockChain() as unknown as ReturnType<typeof supabase.from>;
     });
 
     // 2. Insert Priority Song (Song C)
@@ -70,8 +70,8 @@ describe('Playback Flow Integration', () => {
       { id: '2', song_id: 'B', position: 102, is_playing: false, is_priority: false, songs: { title: 'Song B' } },
     ];
     vi.mocked(supabase.from).mockImplementation((table: string) => {
-      if (table === 'queue_items') return createMockChain(updatedMockItems);
-      return createMockChain();
+      if (table === 'queue_items') return createMockChain(updatedMockItems) as unknown as ReturnType<typeof supabase.from>;
+      return createMockChain() as unknown as ReturnType<typeof supabase.from>;
     });
 
     await advanceQueue();
