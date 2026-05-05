@@ -91,13 +91,16 @@ export async function getQueueItems(): Promise<QueueItem[]> {
 }
 
 export async function insertQueueItem(songId: string, position?: number): Promise<void> {
-  const pos = position ?? Date.now();
-  await supabase.from('queue_items').insert({
+  const pos = position ?? Math.floor(Date.now() / 1000);
+  const { error } = await supabase.from('queue_items').insert({
     venue_id: DEFAULT_VENUE_ID,
     song_id: songId,
     position: pos,
     is_playing: false,
   });
+  if (error) {
+    console.error('[db] insertQueueItem failed:', error);
+  }
   publish(EventType.SONG_ADDED_TO_QUEUE, { songId }).catch(err => console.error('[db] publish SONG_ADDED_TO_QUEUE failed:', err));
 }
 
@@ -362,8 +365,8 @@ export async function fillQueueFromPlaylist(): Promise<void> {
   const needed = 3 - upcomingCount;
   for (let i = 0; i < needed; i++) {
     const randomSong = pSongs[Math.floor(Math.random() * pSongs.length)];
-    // Provide a slightly incremented timestamp so positions are strictly ordered
-    await insertQueueItem(randomSong.song_id, Date.now() + i);
+    // Provide a slightly incremented timestamp so positions are strictly ordered (in seconds)
+    await insertQueueItem(randomSong.song_id, Math.floor(Date.now() / 1000) + i);
   }
 }
 
