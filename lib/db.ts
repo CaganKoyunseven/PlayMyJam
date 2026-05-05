@@ -358,7 +358,7 @@ export async function fillQueueFromPlaylist(): Promise<void> {
   const items = await getQueueItems();
   const upcomingCount = items.filter(i => !i.isPlaying).length;
 
-  if (upcomingCount >= 5) return; // Target 5 upcoming songs
+  if (upcomingCount >= 10) return; // Target 10 upcoming songs
 
   const { data: venue } = await supabase.from('venues').select('active_playlist_id').eq('id', DEFAULT_VENUE_ID).single();
   if (!venue?.active_playlist_id) return;
@@ -373,7 +373,7 @@ export async function fillQueueFromPlaylist(): Promise<void> {
   // If we ran out of unique songs, we can just use the full list to keep music playing
   const pool = availableSongs.length > 0 ? availableSongs : pSongs;
 
-  const needed = 5 - upcomingCount;
+  const needed = 10 - upcomingCount;
   for (let i = 0; i < needed; i++) {
     const randomSong = pool[Math.floor(Math.random() * pool.length)];
     // Provide a slightly incremented timestamp so positions are strictly ordered (in seconds)
@@ -443,4 +443,32 @@ export async function getUserProfile(): Promise<UserProfile | null> {
       year: 'numeric',
     }),
   };
+}
+
+// ── Queue / Playlist Helpers ──────────────────────────────────
+
+// Clear all queue items for the venue (used before re-importing a new playlist)
+export async function clearQueueItems(): Promise<void> {
+  await supabase.from('queue_items').delete().eq('venue_id', DEFAULT_VENUE_ID);
+}
+
+// Get the venue's current active_playlist_id
+export async function getActivePlaylistId(): Promise<string | null> {
+  const { data } = await supabase.from('venues').select('active_playlist_id').eq('id', DEFAULT_VENUE_ID).single();
+  return data?.active_playlist_id ?? null;
+}
+
+// Remove an imported playlist and its playlist_songs from the DB
+export async function removeImportedPlaylist(playlistId: string): Promise<void> {
+  // Delete playlist_songs join records
+  await supabase.from('playlist_songs').delete().eq('playlist_id', playlistId);
+  // Delete the playlist record
+  await supabase.from('playlists').delete().eq('id', playlistId);
+
+  // If this was the active playlist, clear it on the venue and wipe the queue
+  const { data: venue } = await supabase.from('venues').select('active_playlist_id').eq('id', DEFAULT_VENUE_ID).single();
+  if (venue?.active_playlist_id === playlistId) {
+    await supabase.from('venues').update({ active_playlist_id: null }).eq('id', DEFAULT_VENUE_ID);
+    await clearQueueItems();
+  }
 }

@@ -220,8 +220,9 @@ export async function importPlaylist(spotifyPlaylistId: string): Promise<{ playl
     console.error('[importPlaylist] Failed to set active playlist on venue:', venueError);
   }
 
-  // Fill queue and start playing if the queue is idle
-  const { fillQueueFromPlaylist, getQueueItems, advanceQueue } = await import('./db');
+  // Clear old queue and fill with the newly imported playlist
+  const { clearQueueItems, fillQueueFromPlaylist, getQueueItems, advanceQueue } = await import('./db');
+  await clearQueueItems();
   await fillQueueFromPlaylist();
   const qItems = await getQueueItems();
   if (!qItems.find(i => i.isPlaying)) {
